@@ -1,0 +1,134 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{parskip}
+
+\title{VDW14 Tick-Counter Experiment\\
+  \large CadmIA Adaptation --- IA-DEVS, Portless, Interval Time}
+\author{Damián Vicino}
+\date{2026}
+
+\begin{document}
+\maketitle
+
+\section*{References}
+\begin{itemize}
+  \item Vicino, Dalle, Wainer.
+        \textit{A Data Type for Discretized Time Representation in DEVS.}
+        SIMUTOOLS 2014. \texttt{hal-01055555}. (experiment origin)
+  \item Vicino, Wainer, Dalle.
+        \textit{Uncertainty on DES Simulation / UA-DEVS / IA-DEVS.}
+        ACM TOMACS 2021. (formalism)
+\end{itemize}
+
+\section*{IA-DEVS Formalism}
+
+IA-DEVS (Interval-Approximated DEVS) is a computable approximation of UA-DEVS
+in which every quantity --- state, time, input, output --- is replaced by a
+closed interval.  An IA-DEVS atomic model is a tuple
+
+\[
+  M = \langle S, T, X, Y,\;
+      \tilde{\delta}_{\text{int}},\;
+      \tilde{\delta}_{\text{ext}},\;
+      \tilde{\lambda},\;
+      \tilde{ta} \rangle
+\]
+
+where $S$, $T$, $X$, $Y$ are base types and the functions operate on their
+interval counterparts $\tilde{S} = \mathcal{I}(S)$, $\tilde{T} =
+\mathcal{I}(T)$, etc.  All arithmetic is \emph{interval arithmetic}:
+operations produce the smallest interval guaranteed to contain every possible
+result over the input intervals.
+
+CadmIA represents $\tilde{T}$ as \texttt{interval<decimal<N>>}, a closed
+interval over a fixed-point rational type with compile-time scale factor
+$10^{-N}$.
+
+\section*{Canonical Model and IA-DEVS Adaptation}
+
+The tick-counter coupled model has $D = \{G_{1/10},\, G_1,\, K\}$ with
+\[
+  \text{IC} = \{(G_{1/10} \to K.\texttt{input}),\; (G_1 \to K.\texttt{input})\}
+  \qquad
+  \text{EOC} = \{(K.\texttt{output} \to C.\texttt{out})\}
+\]
+
+\subsection*{Portless Coupling}
+
+CadmIA (like CDBoost) does not yet have a typed port system.
+Both generators route to $K$'s single \texttt{input\_t}.  The message value
+distinguishes the signal:
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+  \toprule
+  Value & Semantics \\
+  \midrule
+  $\tilde{v}$ with $0 \notin \tilde{v}$ & add the interval to the accumulator \\
+  $\tilde{0} = [0, 0]$                   & output current total, reset to $[0,0]$ \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection*{Interval Time}
+
+Generator periods are \emph{degenerate} (point) intervals:
+\[
+  \tilde{p}_{G_{1/10}} = [1/10,\; 1/10],\qquad
+  \tilde{p}_{G_1}      = [1,\; 1]
+\]
+
+Because no uncertainty is present in the period, all interval arithmetic
+reduces to scalar arithmetic.  The scheduled time of the $k$-th $G_{1/10}$
+event is the degenerate interval $[k/10,\; k/10]$, computed exactly by
+fixed-point addition with no accumulation error.
+
+\subsection*{Counter Transitions (interval)}
+
+Let $\tilde{n} \in \mathcal{I}(\mathbb{N})$ be the accumulated count interval.
+
+\begin{align*}
+  \tilde{ta}(\tilde{n},\text{idle})  &= [\infty, \infty] \\
+  \tilde{ta}(\tilde{n},\text{ready}) &= [0, 0] \\
+  \tilde{\delta}^K_{\text{ext}}\!\left((\tilde{n},\text{idle}),\, \tilde{e},\, \tilde{x}\right)
+    &= \begin{cases}
+         (\tilde{n} + \tilde{x},\; \text{idle})  & 0 \notin \tilde{x} \\
+         (\tilde{n},\;             \text{ready}) & \tilde{x} = [0,0]
+       \end{cases} \\
+  \tilde{\delta}^K_{\text{int}}\!\left((\tilde{n},\text{ready})\right)
+    &= ([0,0],\; \text{idle}) \\
+  \tilde{\lambda}(\tilde{n},\text{ready})
+    &= \tilde{n}
+\end{align*}
+
+\section*{Expected Observations}
+
+With degenerate period intervals, all internal times are exact:
+\[
+  \tilde{t}_{\text{next}}^{G_{1/10}} = [k/10, k/10], \quad
+  \tilde{t}_{\text{next}}^{G_1} = [k, k]
+\]
+At each integer second $[k,k]$ both generators are simultaneously scheduled;
+interval overlap is $[k,k] \cap [k,k] \neq \emptyset$, so simultaneity is
+detected.  After ten add steps:
+\[
+  \tilde{n} = 10 \cdot [1, 1] = [10, 10]
+\]
+$K$ always outputs the degenerate interval $[10,\, 10]$.
+
+This contrasts with the float case: IEEE~754 accumulation error widens the
+effective uncertainty of $t^{G_{1/10}}_k$ until it crosses the $G_1$ boundary,
+producing $[9,\, 11]$-range outputs.  IA-DEVS with exact period intervals is
+provably immune to this class of causality error.
+
+\section*{Implementation Status}
+
+\textbf{Pending.}  CadmIA does not yet have a coupled-model coordinator, port
+system, or runner.  This experiment cannot be executed until those components
+are implemented (see memory-vault task \texttt{x90}).  The spec above defines
+the intended model and expected results so that implementation can proceed
+directly once the infrastructure is ready.
+
+\end{document}
