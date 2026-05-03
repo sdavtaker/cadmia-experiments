@@ -17,4 +17,4 @@ set(CADMIA_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
 set(CADMIA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory("${CADMIA_DIR}" cadmia-build)
 
-# add_subdirectory(vdw14)   # uncomment when vdw14 experiment is ready
+add_subdirectory(vdw14)

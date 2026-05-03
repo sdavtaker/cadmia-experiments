@@ -5,12 +5,16 @@
 \usepackage{parskip}
 
 \title{VDW14 Tick-Counter Experiment\\
-  \large CadmIA Adaptation --- IA-DEVS, Portless, Interval Time}
+  \large UA-DEVS Model, Approximations, and CadmIA Implementation}
 \author{Damián Vicino}
 \date{2026}
 
 \begin{document}
 \maketitle
+
+\noindent
+\textbf{CadmIA implementation assumptions:} see
+\texttt{cadmia-experiments/cadmia-impl-notes.tex}.
 
 \section*{References}
 \begin{itemize}
@@ -22,113 +26,162 @@
         ACM TOMACS 2021. (formalism)
 \end{itemize}
 
-\section*{IA-DEVS Formalism}
+% ─────────────────────────────────────────────────────────────────────────────
+\section*{UA-DEVS Model}
 
-IA-DEVS (Interval-Approximated DEVS) is a computable approximation of UA-DEVS
-in which every quantity --- state, time, input, output --- is replaced by a
-closed interval.  An IA-DEVS atomic model is a tuple
+The tick-counter is a coupled model $N = \langle D, \{M_d\}, \text{IC},
+\text{EOC}\rangle$ with $D = \{G_{1/10},\, G_1,\, K\}$.
+
+\subsection*{Generator $G_p$ (parametric)}
 
 \[
-  M = \langle S, T, X, Y,\;
-      \tilde{\delta}_{\text{int}},\;
-      \tilde{\delta}_{\text{ext}},\;
-      \tilde{\lambda},\;
-      \tilde{ta} \rangle
+  G_p = \langle S_G,\, T,\, \emptyset,\, Y_G,\;
+        \delta^G_{\text{int}},\, \lambda^G,\, ta^G \rangle
 \]
+\begin{align*}
+  S_G &= \{\bullet\} \quad\text{(single state)}\\
+  ta^G(\bullet) &= p \in T \quad\text{(period, a TIME value)}\\
+  \delta^G_{\text{int}}(\bullet) &= \bullet \\
+  \lambda^G(\bullet) &= \text{tick signal}
+\end{align*}
 
-where $S$, $T$, $X$, $Y$ are base types and the functions operate on their
-interval counterparts $\tilde{S} = \mathcal{I}(S)$, $\tilde{T} =
-\mathcal{I}(T)$, etc.  All arithmetic is \emph{interval arithmetic}:
-operations produce the smallest interval guaranteed to contain every possible
-result over the input intervals.
+$G_{1/10}$ uses $p = 1/10$ and outputs a tick value of $1$.
+$G_1$ uses $p = 1$ and outputs a reset signal.
 
-CadmIA represents $\tilde{T}$ as \texttt{interval<decimal<N>>}, a closed
-interval over a fixed-point rational type with compile-time scale factor
-$10^{-N}$.
+\subsection*{Counter $K$}
 
-\section*{Canonical Model and IA-DEVS Adaptation}
-
-The tick-counter coupled model has $D = \{G_{1/10},\, G_1,\, K\}$ with
 \[
-  \text{IC} = \{(G_{1/10} \to K.\texttt{input}),\; (G_1 \to K.\texttt{input})\}
+  K = \langle S_K,\, T,\, X_K,\, Y_K,\;
+      \delta^K_{\text{int}},\, \delta^K_{\text{ext}},\,
+      \lambda^K,\, ta^K \rangle
+\]
+\begin{align*}
+  S_K &= \mathbb{N} \times \{\text{idle},\, \text{ready}\} \\
+  ta^K(n, \text{idle})  &= \infty \\
+  ta^K(n, \text{ready}) &= 0 \\
+  \delta^K_{\text{ext}}\!\left((n,\text{idle}),\, e,\, x\right)
+    &= \begin{cases}
+         (n + x,\; \text{idle})  & x \neq 0 \quad\text{(tick)}\\
+         (n,\;     \text{ready}) & x = 0    \quad\text{(reset signal)}
+       \end{cases}\\
+  \delta^K_{\text{int}}(n, \text{ready}) &= (0,\; \text{idle}) \\
+  \lambda^K(n, \text{ready}) &= n
+\end{align*}
+
+\subsection*{Coupling}
+
+Both generators route to $K$.  In the UA-DEVS model the coupling is typed:
+$G_{1/10}$ outputs to $K.\texttt{add}$ and $G_1$ outputs to
+$K.\texttt{reset}$.  For the portless CadmIA implementation see the
+implementation notes below.
+
+\[
+  \text{IC} = \{(G_{1/10}.\texttt{out} \to K.\texttt{add}),\;
+               (G_1.\texttt{out} \to K.\texttt{reset})\}
   \qquad
-  \text{EOC} = \{(K.\texttt{output} \to C.\texttt{out})\}
+  \text{EOC} = \{(K.\texttt{out} \to N.\texttt{out})\}
 \]
 
-\subsection*{Portless Coupling}
+% ─────────────────────────────────────────────────────────────────────────────
+\section*{Selected Approximations}
 
-CadmIA (like CDBoost) does not yet have a typed port system.
-Both generators route to $K$'s single \texttt{input\_t}.  The message value
-distinguishes the signal:
+\paragraph{TIME type.}  \texttt{decimal<3>} (millisecond resolution).
+All periods in this experiment are exact multiples of $1\,\text{ms}$,
+so no rounding occurs and the outward-rounding invariant is satisfied
+trivially.
 
-\begin{center}
-\begin{tabular}{@{}ll@{}}
-  \toprule
-  Value & Semantics \\
-  \midrule
-  $\tilde{v}$ with $0 \notin \tilde{v}$ & add the interval to the accumulator \\
-  $\tilde{0} = [0, 0]$                   & output current total, reset to $[0,0]$ \\
-  \bottomrule
-\end{tabular}
-\end{center}
+\paragraph{Interval kind for periods.}  Degenerate (point) intervals.
+The periods $p_{G_{1/10}} = 100\,\text{ms}$ and $p_{G_1} = 1000\,\text{ms}$
+are assumed known exactly.  Choosing degenerate intervals eliminates period
+uncertainty from the model so that any causality error must arise from time
+arithmetic rather than from model specification.
 
-\subsection*{Interval Time}
+\paragraph{Interval kind for values.}  Degenerate.  Tick value $1$ and reset
+signal $0$ are exact integers; both are represented as point intervals
+$[1,1]$ and $[0,0]$.
 
-Generator periods are \emph{degenerate} (point) intervals:
-\[
-  \tilde{p}_{G_{1/10}} = [1/10,\; 1/10],\qquad
-  \tilde{p}_{G_1}      = [1,\; 1]
-\]
+% ─────────────────────────────────────────────────────────────────────────────
+\section*{IA-DEVS Resulting Model}
 
-Because no uncertainty is present in the period, all interval arithmetic
-reduces to scalar arithmetic.  The scheduled time of the $k$-th $G_{1/10}$
-event is the degenerate interval $[k/10,\; k/10]$, computed exactly by
-fixed-point addition with no accumulation error.
+With the approximations above, the interval counterparts of the transitions
+are:
 
-\subsection*{Counter Transitions (interval)}
+\subsection*{Generator (interval)}
+\begin{align*}
+  \tilde{ta}^G(\tilde{\bullet}) &= [p,\; p] \quad\text{(degenerate period)}\\
+  \tilde{\delta}^G_{\text{int}}(\tilde{\bullet}) &= \tilde{\bullet} \\
+  \tilde{\lambda}^G(\tilde{\bullet}) &= [v,\; v]
+    \quad (v=1\text{ for }G_{1/10},\; v=0\text{ for }G_1)
+\end{align*}
 
-Let $\tilde{n} \in \mathcal{I}(\mathbb{N})$ be the accumulated count interval.
+\subsection*{Counter $K$ (interval)}
+
+Let $\tilde{n} \in \mathcal{I}(\mathbb{N})$.
 
 \begin{align*}
-  \tilde{ta}(\tilde{n},\text{idle})  &= [\infty, \infty] \\
-  \tilde{ta}(\tilde{n},\text{ready}) &= [0, 0] \\
-  \tilde{\delta}^K_{\text{ext}}\!\left((\tilde{n},\text{idle}),\, \tilde{e},\, \tilde{x}\right)
+  \tilde{ta}^K(\tilde{n},\text{idle})  &= [\infty, \infty] \\
+  \tilde{ta}^K(\tilde{n},\text{ready}) &= [0, 0] \\
+  \tilde{\delta}^K_{\text{ext}}\!\left((\tilde{n},\text{idle}),\,
+      \tilde{e},\, \tilde{x}\right)
     &= \begin{cases}
          (\tilde{n} + \tilde{x},\; \text{idle})  & 0 \notin \tilde{x} \\
          (\tilde{n},\;             \text{ready}) & \tilde{x} = [0,0]
        \end{cases} \\
-  \tilde{\delta}^K_{\text{int}}\!\left((\tilde{n},\text{ready})\right)
+  \tilde{\delta}^K_{\text{int}}((\tilde{n},\text{ready}))
     &= ([0,0],\; \text{idle}) \\
-  \tilde{\lambda}(\tilde{n},\text{ready})
+  \tilde{\lambda}^K(\tilde{n},\text{ready})
     &= \tilde{n}
 \end{align*}
 
-\section*{Expected Observations}
+\subsection*{Expected output}
 
-With degenerate period intervals, all internal times are exact:
+Because all intervals are degenerate and arithmetic is exact under
+\texttt{decimal<3>}, every internal time is a point:
 \[
-  \tilde{t}_{\text{next}}^{G_{1/10}} = [k/10, k/10], \quad
-  \tilde{t}_{\text{next}}^{G_1} = [k, k]
+  \tilde{t}^{G_{1/10}}_k = [k/10,\, k/10], \qquad
+  \tilde{t}^{G_1}_k      = [k,\, k]
 \]
-At each integer second $[k,k]$ both generators are simultaneously scheduled;
-interval overlap is $[k,k] \cap [k,k] \neq \emptyset$, so simultaneity is
-detected.  After ten add steps:
+At each integer second both generators are simultaneously scheduled;
+after ten tick events the counter holds:
 \[
-  \tilde{n} = 10 \cdot [1, 1] = [10, 10]
+  \tilde{n} = 10 \cdot [1,1] = [10,10]
 \]
-$K$ always outputs the degenerate interval $[10,\, 10]$.
+$K$ always outputs the degenerate interval $[10,\,10]$.
 
-This contrasts with the float case: IEEE~754 accumulation error widens the
-effective uncertainty of $t^{G_{1/10}}_k$ until it crosses the $G_1$ boundary,
-producing $[9,\, 11]$-range outputs.  IA-DEVS with exact period intervals is
-provably immune to this class of causality error.
+% ─────────────────────────────────────────────────────────────────────────────
+\section*{Implementation Notes (CadmIA)}
 
-\section*{Implementation Status}
+\paragraph{Portless coupling.}
+CadmIA has no typed port system.  Both generators route to $K$'s single
+\texttt{input\_t = int}.  The reset signal is encoded as value $0$; any
+non-zero value is a tick.
 
-\textbf{Pending.}  CadmIA does not yet have a coupled-model coordinator, port
-system, or runner.  This experiment cannot be executed until those components
-are implemented (see memory-vault task \texttt{x90}).  The spec above defines
-the intended model and expected results so that implementation can proceed
-directly once the infrastructure is ready.
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+  \toprule
+  Interval value $\tilde{x}$ & Semantics for $K$ \\
+  \midrule
+  $[0, 0]$             & reset: output count, go to ready \\
+  $\tilde{x}$, $0 \notin \tilde{x}$ & tick: add $\tilde{x}$ to accumulator \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{SELECT policy.}
+At $t = [k,k]$ for integer $k$, both $G_{1/10}$ and $G_1$ are imminent.
+$G_{1/10}$ must be selected first so that $K$ accumulates the $k$-th tick
+before receiving the reset signal.  The \textsc{select} function is:
+\[
+  \textsc{select}(S) =
+    \begin{cases}
+      G_{1/10} & \text{if } G_{1/10} \in S \\
+      G_1      & \text{if } G_1 \in S \\
+      \text{first}(S) & \text{otherwise}
+    \end{cases}
+\]
+
+\paragraph{Implementation status.}
+Implemented and verified.  Across 100 resets, $K$ outputs $[10,10]$ at
+every reset event (0 errors).  Source: \texttt{vdw14/main.cpp}.
 
 \end{document}

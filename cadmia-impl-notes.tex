@@ -1,0 +1,111 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{parskip}
+
+\title{CadmIA --- IA-DEVS Implementation Notes\\
+  \large Assumptions and Constraints Common to All Experiments}
+\author{Damián Vicino}
+\date{2026}
+
+\begin{document}
+\maketitle
+
+This document records the design decisions and invariants of the CadmIA
+implementation of IA-DEVS that apply to every experiment in this repository.
+Experiment-specific specs should reference these notes rather than repeat them.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section*{Interval Representation}
+
+IA-DEVS replaces every scalar quantity with an \emph{interval}.  CadmIA
+represents an interval as a pair $[\ell, u]$ where $\ell$ and $u$ are values
+of the same underlying scalar type.  Any interval kind is permitted:
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+  \toprule
+  Kind & Condition \\
+  \midrule
+  Closed         & $\ell \leq u$                         \\
+  Open           & $\ell < u$ (endpoints excluded)       \\
+  Half-open      & one endpoint excluded                 \\
+  Degenerate     & $\ell = u$ (point interval)           \\
+  Empty          & $\ell > u$ (no element)               \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+There is no requirement that intervals be closed.  The choice of interval kind
+is part of the model specification for each experiment and should be justified
+there.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section*{TIME Type}
+
+The type used for time values in a CadmIA model may be \emph{any type that is
+a valid TIME type in Cadmium or CDBoost}: floating-point types
+(\texttt{float}, \texttt{double}), fixed-point rational types
+(\texttt{decimal<N>}), integer types, or any user-defined totally-ordered
+arithmetic type.
+
+The interval type for time is therefore \texttt{interval<T>} for any such
+\texttt{T} — not exclusively \texttt{interval<decimal<N>>}.  The choice of
+\texttt{T} is an approximation decision recorded in each experiment's spec.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section*{Outward-Rounding Invariant}
+
+The fundamental soundness requirement for IA-DEVS is that every interval
+must \emph{contain} the exact value it approximates.  Formally, if $r$ is an
+exact real value and $[\ell, u]$ is its representation:
+\[
+  \ell \;\leq\; r \;\leq\; u
+\]
+Equivalently, rounding must always go \emph{outward}: the lower bound rounds
+toward $-\infty$ (never up), the upper bound rounds toward $+\infty$ (never
+down).  Rounding toward the inside of the interval is not permitted, as it
+would exclude the true value and invalidate the IA-DEVS enclosure guarantee.
+
+\subsection*{Consequences by TIME type}
+
+\paragraph{\texttt{decimal<N>}.}
+Values expressible as multiples of $10^{-N}$ are represented exactly; no
+rounding occurs and intervals may be degenerate.  All experiments in this
+repository that use \texttt{decimal<3>} with periods that are exact
+multiples of $1\,\text{ms}$ satisfy this condition automatically.
+
+\paragraph{Floating-point (\texttt{float}, \texttt{double}).}
+IEEE~754 arithmetic does not guarantee outward rounding by default.  When
+constructing an interval endpoint from a computed value, the caller must
+use directed rounding:
+\begin{itemize}
+  \item Lower bound: round toward $-\infty$ (\texttt{fesetround(FE\_DOWNWARD)})
+  \item Upper bound: round toward $+\infty$ (\texttt{fesetround(FE\_UPWARD)})
+\end{itemize}
+Experiments that use floating-point TIME must document whether directed
+rounding is applied, and if not, what approximation error is being accepted.
+
+\paragraph{Integer types.}
+Integers are exact; intervals may always be degenerate when the modelled
+quantity is an integer.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section*{Portless Coupling}
+
+CadmIA does not yet implement a typed port system.  Components are connected
+by a single untyped channel per pair; the message \emph{value} distinguishes
+signal semantics.  Each experiment spec must document the value-to-signal
+encoding it uses.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section*{SELECT Function}
+
+When multiple components are simultaneously imminent, the CadmIA coordinator
+calls a user-supplied \textsc{select} function to pick the next component to
+advance.  The choice affects the simulation trace whenever simultaneous events
+carry causal dependencies.  Each experiment spec must state the \textsc{select}
+policy and justify it.
+
+\end{document}
