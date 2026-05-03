@@ -112,10 +112,14 @@ quantity is an integer.
 % ─────────────────────────────────────────────────────────────────────────────
 \section*{Portless Coupling}
 
-CadmIA does not yet implement a typed port system.  Components are connected
-by a single untyped channel per pair; the message \emph{value} distinguishes
-signal semantics.  Each experiment spec must document the value-to-signal
-encoding it uses.
+UA-DEVS and IA-DEVS, as defined in VDW21, do not include ports in their
+formalism.  Ports are a feature of PDEVS-with-ports (the formalism Cadmium
+implements), not of DEVS or its uncertainty extensions.  CadmIA therefore
+connects components via a single untyped channel per pair; the message
+\emph{value} distinguishes signal semantics.
+
+This is a correct implementation of the formalism, not a missing feature.
+Each experiment spec must document the value-to-signal encoding it uses.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section*{SELECT Function}

@@ -74,10 +74,9 @@ $G_1$ uses $p = 1$ and outputs a reset signal.
 
 \subsection*{Coupling}
 
-Both generators route to $K$.  In the UA-DEVS model the coupling is typed:
-$G_{1/10}$ outputs to $K.\texttt{add}$ and $G_1$ outputs to
-$K.\texttt{reset}$.  For the portless CadmIA implementation see the
-implementation notes below.
+Both generators route to $K$.  The coupling notation below uses named
+channels for clarity; the IA-DEVS implementation encodes the signal in the
+message value (see implementation notes).
 
 \[
   \text{IC} = \{(G_{1/10}.\texttt{out} \to K.\texttt{add}),\;
@@ -156,9 +155,9 @@ $K$ always outputs the degenerate interval $[10,\,10]$.
 \section*{Implementation Notes (CadmIA)}
 
 \paragraph{Portless coupling.}
-CadmIA has no typed port system.  Both generators route to $K$'s single
-\texttt{input\_t = int}.  The reset signal is encoded as value $0$; any
-non-zero value is a tick.
+UA-DEVS and IA-DEVS do not define ports; coupling is by value.  Both
+generators route to $K$'s single \texttt{input\_t = int}.  The reset signal
+is encoded as value $0$; any non-zero value is a tick.
 
 \begin{center}
 \begin{tabular}{@{}ll@{}}
