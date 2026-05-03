@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: BSD-2-Clause
+#pragma once
+
+#include <cadmia/modeling/decimal.hpp>
+#include <cadmia/modeling/interval.hpp>
+
+namespace vdw14 {
+
+    // tick_gen fires every 100 ms, outputs [1, 1].
+    // Period is exact under decimal<3>: 100 ms = 0.100 s.
+    template <typename TIME> struct tick_gen {
+        using time_t   = TIME;
+        using state_t  = int;
+        using input_t  = int;
+        using output_t = int;
+
+        using time_i_t   = cadmia::modeling::interval<time_t>;
+        using state_i_t  = cadmia::modeling::interval<state_t>;
+        using input_i_t  = cadmia::modeling::interval<input_t>;
+        using output_i_t = cadmia::modeling::interval<output_t>;
+
+        static state_i_t internal_transition(const state_i_t &s) {
+            return s;
+        }
+
+        static state_i_t external_transition(const state_i_t &s, const time_i_t &,
+                                             const input_i_t &) {
+            return s;
+        }
+
+        static output_i_t output(const state_i_t &) {
+            return output_i_t::closed(1, 1);
+        }
+
+        static time_i_t time_advance(const state_i_t &) {
+            const auto p = TIME::from_scaled(100); // 100 ms
+            return time_i_t::closed(p, p);
+        }
+    };
+
+} // namespace vdw14
