@@ -1,22 +1,4 @@
-\documentclass[11pt,a4paper]{article}
-\usepackage{amsmath,amssymb}
-\usepackage{booktabs}
-\usepackage{microtype}
-\usepackage{parskip}
-
-\title{VDW14 Tick-Counter Experiment\\
-  \large UA-DEVS Model, Approximations, and CadmIA Implementation}
-\author{Damián Vicino}
-\date{2026}
-
-\begin{document}
-\maketitle
-
-\noindent
-\textbf{CadmIA implementation assumptions:} see
-\texttt{cadmia-experiments/cadmia-impl-notes.tex}.
-
-\section*{References}
+\subsection*{References}
 \begin{itemize}
   \item Damian Vicino, Gabriel A.\ Wainer, Olivier Dalle.
         \textit{Uncertainty on Discrete-Event System Simulation.}
@@ -31,12 +13,12 @@
 \end{itemize}
 
 % ─────────────────────────────────────────────────────────────────────────────
-\section*{UA-DEVS Model}
+\subsection*{UA-DEVS Model}
 
 The tick-counter is a coupled model $N = \langle D, \{M_d\}, \text{IC},
 \text{EOC}\rangle$ with $D = \{G_{1/10},\, G_1,\, K\}$.
 
-\subsection*{Generator $G_p$ (parametric)}
+\subsubsection*{Generator $G_p$ (parametric)}
 
 \[
   G_p = \langle S_G,\, T,\, \emptyset,\, Y_G,\;
@@ -52,7 +34,7 @@ The tick-counter is a coupled model $N = \langle D, \{M_d\}, \text{IC},
 $G_{1/10}$ uses $p = 1/10$ and outputs a tick value of $1$.
 $G_1$ uses $p = 1$ and outputs a reset signal.
 
-\subsection*{Counter $K$}
+\subsubsection*{Counter $K$}
 
 \[
   K = \langle S_K,\, T,\, X_K,\, Y_K,\;
@@ -72,7 +54,7 @@ $G_1$ uses $p = 1$ and outputs a reset signal.
   \lambda^K(n, \text{ready}) &= n
 \end{align*}
 
-\subsection*{Coupling}
+\subsubsection*{Coupling}
 
 Both generators route to $K$.  The coupling notation below uses named
 channels for clarity; the IA-DEVS implementation encodes the signal in the
@@ -86,7 +68,7 @@ message value (see implementation notes).
 \]
 
 % ─────────────────────────────────────────────────────────────────────────────
-\section*{Selected Approximations}
+\subsection*{Selected Approximations}
 
 \paragraph{TIME type.}  \texttt{decimal<3>} (millisecond resolution).
 All periods in this experiment are exact multiples of $1\,\text{ms}$,
@@ -104,12 +86,12 @@ signal $0$ are exact integers; both are represented as point intervals
 $[1,1]$ and $[0,0]$.
 
 % ─────────────────────────────────────────────────────────────────────────────
-\section*{IA-DEVS Resulting Model}
+\subsection*{IA-DEVS Resulting Model}
 
 With the approximations above, the interval counterparts of the transitions
 are:
 
-\subsection*{Generator (interval)}
+\subsubsection*{Generator (interval)}
 \begin{align*}
   \tilde{ta}^G(\tilde{\bullet}) &= [p,\; p] \quad\text{(degenerate period)}\\
   \tilde{\delta}^G_{\text{int}}(\tilde{\bullet}) &= \tilde{\bullet} \\
@@ -117,7 +99,7 @@ are:
     \quad (v=1\text{ for }G_{1/10},\; v=0\text{ for }G_1)
 \end{align*}
 
-\subsection*{Counter $K$ (interval)}
+\subsubsection*{Counter $K$ (interval)}
 
 Let $\tilde{n} \in \mathcal{I}(\mathbb{N})$.
 
@@ -136,7 +118,7 @@ Let $\tilde{n} \in \mathcal{I}(\mathbb{N})$.
     &= \tilde{n}
 \end{align*}
 
-\subsection*{Expected output}
+\subsubsection*{Expected output}
 
 Because all intervals are degenerate and arithmetic is exact under
 \texttt{decimal<3>}, every internal time is a point:
@@ -152,7 +134,7 @@ after ten tick events the counter holds:
 $K$ always outputs the degenerate interval $[10,\,10]$.
 
 % ─────────────────────────────────────────────────────────────────────────────
-\section*{Implementation Notes (CadmIA)}
+\subsection*{Implementation Notes (CadmIA)}
 
 \paragraph{Portless coupling.}
 UA-DEVS and IA-DEVS do not define ports; coupling is by value.  Both
@@ -186,5 +168,3 @@ before receiving the reset signal.  The \textsc{select} function is:
 \paragraph{Implementation status.}
 Implemented and verified.  Across 100 resets, $K$ outputs $[10,10]$ at
 every reset event (0 errors).  Source: \texttt{vdw14/main.cpp}.
-
-\end{document}

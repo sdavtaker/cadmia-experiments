@@ -1,22 +1,7 @@
-\documentclass[11pt,a4paper]{article}
-\usepackage{amsmath,amssymb}
-\usepackage{booktabs}
-\usepackage{microtype}
-\usepackage{parskip}
-
-\title{CadmIA --- IA-DEVS Implementation Notes\\
-  \large Assumptions and Constraints Common to All Experiments}
-\author{Damián Vicino}
-\date{2026}
-
-\begin{document}
-\maketitle
-
-This document records the design decisions and invariants of the CadmIA
+This section records the design decisions and invariants of the CadmIA
 implementation of IA-DEVS that apply to every experiment in this repository.
-Experiment-specific specs should reference these notes rather than repeat them.
 
-\section*{Foundational Reference}
+\subsection*{Foundational Reference}
 
 The UA-DEVS and IA-DEVS formalisms are defined in:
 
@@ -35,7 +20,7 @@ VWD17) and is the reference that should be cited whenever UA-DEVS or
 IA-DEVS notation is used.
 
 % ─────────────────────────────────────────────────────────────────────────────
-\section*{Interval Representation}
+\subsection*{Interval Representation}
 
 IA-DEVS replaces every scalar quantity with an \emph{interval}.  CadmIA
 represents an interval as a pair $[\ell, u]$ where $\ell$ and $u$ are values
@@ -60,7 +45,7 @@ is part of the model specification for each experiment and should be justified
 there.
 
 % ─────────────────────────────────────────────────────────────────────────────
-\section*{TIME Type}
+\subsection*{TIME Type}
 
 The type used for time values in a CadmIA model may be \emph{any type that is
 a valid TIME type in Cadmium or CDBoost}: floating-point types
@@ -69,11 +54,11 @@ a valid TIME type in Cadmium or CDBoost}: floating-point types
 arithmetic type.
 
 The interval type for time is therefore \texttt{interval<T>} for any such
-\texttt{T} — not exclusively \texttt{interval<decimal<N>>}.  The choice of
+\texttt{T} --- not exclusively \texttt{interval<decimal<N>>}.  The choice of
 \texttt{T} is an approximation decision recorded in each experiment's spec.
 
 % ─────────────────────────────────────────────────────────────────────────────
-\section*{Outward-Rounding Invariant}
+\subsection*{Outward-Rounding Invariant}
 
 The fundamental soundness requirement for IA-DEVS is that every interval
 must \emph{contain} the exact value it approximates.  Formally, if $r$ is an
@@ -86,7 +71,7 @@ toward $-\infty$ (never up), the upper bound rounds toward $+\infty$ (never
 down).  Rounding toward the inside of the interval is not permitted, as it
 would exclude the true value and invalidate the IA-DEVS enclosure guarantee.
 
-\subsection*{Consequences by TIME type}
+\subsubsection*{Consequences by TIME type}
 
 \paragraph{\texttt{decimal<N>}.}
 Values expressible as multiples of $10^{-N}$ are represented exactly; no
@@ -110,7 +95,7 @@ Integers are exact; intervals may always be degenerate when the modelled
 quantity is an integer.
 
 % ─────────────────────────────────────────────────────────────────────────────
-\section*{Portless Coupling}
+\subsection*{Portless Coupling}
 
 UA-DEVS and IA-DEVS, as defined in VDW21, do not include ports in their
 formalism.  Ports are a feature of PDEVS-with-ports (the formalism Cadmium
@@ -122,12 +107,10 @@ This is a correct implementation of the formalism, not a missing feature.
 Each experiment spec must document the value-to-signal encoding it uses.
 
 % ─────────────────────────────────────────────────────────────────────────────
-\section*{SELECT Function}
+\subsection*{SELECT Function}
 
 When multiple components are simultaneously imminent, the CadmIA coordinator
 calls a user-supplied \textsc{select} function to pick the next component to
 advance.  The choice affects the simulation trace whenever simultaneous events
 carry causal dependencies.  Each experiment spec must state the \textsc{select}
 policy and justify it.
-
-\end{document}
