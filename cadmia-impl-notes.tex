@@ -34,7 +34,7 @@ of the same underlying scalar type.  Any interval kind is permitted:
   Closed         & $\ell \leq u$                         \\
   Open           & $\ell < u$ (endpoints excluded)       \\
   Half-open      & one endpoint excluded                 \\
-  Degenerate     & $\ell = u$ (point interval)           \\
+  Point          & $\ell = u$ (point interval)           \\
   Empty          & $\ell > u$ (no element)               \\
   \bottomrule
 \end{tabular}
@@ -75,7 +75,7 @@ would exclude the true value and invalidate the IA-DEVS enclosure guarantee.
 
 \paragraph{\texttt{decimal<N>}.}
 Values expressible as multiples of $10^{-N}$ are represented exactly; no
-rounding occurs and intervals may be degenerate.  All experiments in this
+rounding occurs and intervals may be point intervals.  All experiments in this
 repository that use \texttt{decimal<3>} with periods that are exact
 multiples of $1\,\text{ms}$ satisfy this condition automatically.
 
@@ -91,7 +91,7 @@ Experiments that use floating-point TIME must document whether directed
 rounding is applied, and if not, what approximation error is being accepted.
 
 \paragraph{Integer types.}
-Integers are exact; intervals may always be degenerate when the modelled
+Integers are exact; intervals may always be point intervals when the modelled
 quantity is an integer.
 
 % ─────────────────────────────────────────────────────────────────────────────

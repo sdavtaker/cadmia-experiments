@@ -75,13 +75,13 @@ All periods in this experiment are exact multiples of $1\,\text{ms}$,
 so no rounding occurs and the outward-rounding invariant is satisfied
 trivially.
 
-\paragraph{Interval kind for periods.}  Degenerate (point) intervals.
+\paragraph{Interval kind for periods.}  Point intervals.
 The periods $p_{G_{1/10}} = 100\,\text{ms}$ and $p_{G_1} = 1000\,\text{ms}$
-are assumed known exactly.  Choosing degenerate intervals eliminates period
+are assumed known exactly.  Choosing point intervals eliminates period
 uncertainty from the model so that any causality error must arise from time
 arithmetic rather than from model specification.
 
-\paragraph{Interval kind for values.}  Degenerate.  Tick value $1$ and reset
+\paragraph{Interval kind for values.}  Point intervals.  Tick value $1$ and reset
 signal $0$ are exact integers; both are represented as point intervals
 $[1,1]$ and $[0,0]$.
 
@@ -93,7 +93,7 @@ are:
 
 \subsubsection*{Generator (interval)}
 \begin{align*}
-  \tilde{ta}^G(\tilde{\bullet}) &= [p,\; p] \quad\text{(degenerate period)}\\
+  \tilde{ta}^G(\tilde{\bullet}) &= [p,\; p] \quad\text{(point interval period)}\\
   \tilde{\delta}^G_{\text{int}}(\tilde{\bullet}) &= \tilde{\bullet} \\
   \tilde{\lambda}^G(\tilde{\bullet}) &= [v,\; v]
     \quad (v=1\text{ for }G_{1/10},\; v=0\text{ for }G_1)
@@ -120,7 +120,7 @@ Let $\tilde{n} \in \mathcal{I}(\mathbb{N})$.
 
 \subsubsection*{Expected output}
 
-Because all intervals are degenerate and arithmetic is exact under
+Because all intervals are point intervals and arithmetic is exact under
 \texttt{decimal<3>}, every internal time is a point:
 \[
   \tilde{t}^{G_{1/10}}_k = [k/10,\, k/10], \qquad
@@ -131,7 +131,7 @@ after ten tick events the counter holds:
 \[
   \tilde{n} = 10 \cdot [1,1] = [10,10]
 \]
-$K$ always outputs the degenerate interval $[10,\,10]$.
+$K$ always outputs the point interval $[10,\,10]$.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection*{Implementation Notes (CadmIA)}
