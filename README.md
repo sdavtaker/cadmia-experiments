@@ -1,0 +1,53 @@
+# CadmIA Experiments
+
+Reproduction of the tick-counter study using the CadmIA C++23 IA-DEVS simulator,
+where time and values are represented as intervals rather than scalars.
+
+## What this repository is about
+
+CadmIA implements Interval-Arithmetic DEVS (IA-DEVS), a formalism in which every
+quantity carries an interval uncertainty.  The simulator is the C++23 successor to
+Cadmium, built on C++ Concepts for type-safe interval-time models.
+
+The underlying formalism is defined in:
+
+> Vicino, Wainer, Dalle. *Uncertainty on Discrete-Event System Simulation.*
+> ACM TOMACS, Vol. 32, No. 1, Article 2, 2021. DOI: 10.1145/3466169.
+
+These experiments apply the tick-counter model from VDW14 in the IA-DEVS setting to
+show how interval arithmetic propagates the uncertainty introduced by discretized time.
+
+## Structure
+
+```
+cadmia-impl-notes.tex    Shared implementation notes (IA-DEVS conventions,
+                         interval representation, log format) included in the paper.
+docs/
+  main.tex               Root LaTeX document — compiles to main.pdf.
+  main.pdf               Built paper.
+vdw14/
+  spec.tex               Model definition and expected observations.
+  main.cpp               Simulation driver.
+  k_counter.hpp          Interval-arithmetic counter model.
+  tick_gen.hpp           Tick generator (period [1/10, 1/10] s).
+  reset_gen.hpp          Reset generator (period [1, 1] s).
+  test_models.cpp        Unit tests.
+  CMakeLists.txt
+vcpkg.json               vcpkg dependency manifest.
+CMakeLists.txt           Root build configuration.
+```
+
+## Building
+
+Requires CMake, vcpkg, and g++-14 (C++23 Concepts).
+
+```sh
+cmake -B build -S . \
+  -DCMAKE_TOOLCHAIN_FILE=<vcpkg-root>/scripts/buildsystems/vcpkg.cmake \
+  -DCMAKE_CXX_COMPILER=g++-14
+cmake --build build -j2
+ctest --test-dir build
+```
+
+Simulation executables write NDJSON logs to stdout.
+See `simulators/cadmia/docs/log-format.md` for the log schema.
