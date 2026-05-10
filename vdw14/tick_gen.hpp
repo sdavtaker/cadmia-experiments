@@ -4,10 +4,16 @@
 #include <cadmia/modeling/decimal.hpp>
 #include <cadmia/modeling/interval.hpp>
 
+#include <cfenv>
+#include <concepts>
+
 namespace vdw14 {
 
     // tick_gen fires every 100 ms, outputs [1, 1].
-    // Period is exact under decimal<3>: 100 ms = 0.100 s.
+    // For decimal<N>: period 0.100 s is exact; returns a point interval.
+    // For float/double: 0.1 is not exactly representable in binary; the period
+    // is computed as 1/10 with directed rounding to produce an enclosing interval.
+    // Compile float/double variants with -frounding-math -fno-unsafe-math-optimizations.
     template <typename TIME> struct tick_gen {
         using time_t   = TIME;
         using state_t  = int;
@@ -33,8 +39,22 @@ namespace vdw14 {
         }
 
         static time_i_t time_advance(const state_i_t &) {
-            const auto p = TIME::from_scaled(100); // 100 ms
-            return time_i_t::closed(p, p);
+            if constexpr (requires { TIME::from_scaled(100); }) {
+                // Exact fixed-point decimal: period is representable without rounding.
+                const auto p = TIME::from_scaled(100);
+                return time_i_t::closed(p, p);
+            } else {
+                // Floating-point: compute 1/10 with directed rounding so the
+                // resulting interval encloses the true period 0.1 s.
+                const TIME one{1};
+                const TIME ten{10};
+                std::fesetround(FE_DOWNWARD);
+                const TIME lo = one / ten;
+                std::fesetround(FE_UPWARD);
+                const TIME hi = one / ten;
+                std::fesetround(FE_TONEAREST);
+                return time_i_t::closed(lo, hi);
+            }
         }
     };
 

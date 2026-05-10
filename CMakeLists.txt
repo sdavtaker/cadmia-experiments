@@ -22,6 +22,28 @@ find_package(Catch2 3 CONFIG REQUIRED)
 include(CTest)
 enable_testing()
 
+# Helper: build one executable per TIME variant (decimal, float, double).
+# Usage: cadmia_add_time_variants(<name-prefix> <source>)
+# Produces: <name-prefix>-decimal, <name-prefix>-float, <name-prefix>-double
+#
+# float and double variants are compiled with -frounding-math and
+# -fno-unsafe-math-optimizations so that fesetround() calls in
+# interval arithmetic and model time-advance functions are respected.
+function(cadmia_add_time_variants prefix source)
+    foreach(variant IN ITEMS decimal float double)
+        set(target "${prefix}-${variant}")
+        string(TOUPPER "${variant}" variant_upper)
+        add_executable(${target} ${source})
+        target_compile_definitions(${target} PRIVATE "CADMIA_TIME_${variant_upper}")
+        target_compile_options(${target} PRIVATE -Wall -Wextra -pedantic)
+        if(variant STREQUAL "float" OR variant STREQUAL "double")
+            target_compile_options(${target} PRIVATE
+                -frounding-math -fno-unsafe-math-optimizations)
+        endif()
+        target_link_libraries(${target} PRIVATE cadmia::cadmia)
+    endforeach()
+endfunction()
+
 add_subdirectory(vdw14)
 
 # Code Formatting

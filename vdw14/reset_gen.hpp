@@ -4,10 +4,13 @@
 #include <cadmia/modeling/decimal.hpp>
 #include <cadmia/modeling/interval.hpp>
 
+#include <concepts>
+
 namespace vdw14 {
 
-    // reset_gen fires every 1000 ms, outputs [0, 0].
-    // Period is exact under decimal<3>: 1000 ms = 1.000 s.
+    // reset_gen fires every 1000 ms = 1 s, outputs [0, 0].
+    // For decimal<N>: period 1.000 s is exact; returns a point interval.
+    // For float/double: 1.0 is exactly representable in binary; returns a point interval.
     // Output [0, 0] is the reset signal recognized by k_counter.
     template <typename TIME> struct reset_gen {
         using time_t   = TIME;
@@ -34,8 +37,15 @@ namespace vdw14 {
         }
 
         static time_i_t time_advance(const state_i_t &) {
-            const auto p = TIME::from_scaled(1000); // 1000 ms = 1 s
-            return time_i_t::closed(p, p);
+            if constexpr (requires { TIME::from_scaled(1000); }) {
+                // Exact fixed-point decimal.
+                const auto p = TIME::from_scaled(1000);
+                return time_i_t::closed(p, p);
+            } else {
+                // 1.0 is exactly representable in all IEEE 754 formats; point interval.
+                const TIME p{1};
+                return time_i_t::closed(p, p);
+            }
         }
     };
 

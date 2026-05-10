@@ -6,27 +6,42 @@ counted over time and periodically reset.  A fast generator fires every
 $1/10$\,s, a slow generator fires every $1$\,s, and a counter accumulates
 ticks and outputs the count on each reset; ideally the count is $10$ at
 every reset.  This experiment applies the IA-DEVS formalism~\cite{VDW21}
-to the same model, replacing scalar time with interval arithmetic and
-studying whether the enclosure guarantee eliminates causality errors.
+to the same model, replacing scalar time with interval arithmetic.
+The enclosure guarantee mathematically ensures that causality errors are
+eliminated~\cite{VDW21}; what we evaluate empirically is (i)~how much the
+intervals grow over long runs---whether accumulated uncertainty remains bounded
+or expands without limit---and (ii)~the computational cost of the interval
+simulation compared to plain DEVS and PDEVS in practice.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection*{UA-DEVS Model}
 
-The tick-counter is a coupled model $N = \langle D, \{M_d\}, \text{IC},
-\text{EOC}\rangle$ with $D = \{G_{1/10},\, G_1,\, K\}$.
+The tick-counter is a coupled model
+\[
+  N = \langle X_N,\, Y_N,\, D,\, \{M_d\}_{d \in D},\, I,\, Z,\, \textsc{Select} \rangle
+\]
+with $D = \{G_{1/10},\, G_1,\, K\}$ and $X_N = \emptyset$ (no external input).
 
 \subsubsection*{Generator $G_p$ (parametric)}
 
 \[
   G_p = \langle S_G,\, T,\, \emptyset,\, Y_G,\;
-        \delta^G_{\text{int}},\, \lambda^G,\, ta^G \rangle
+        \delta^G_{\text{int}},\, \delta^G_{\text{ext}},\,
+        \lambda^G,\, ta^G \rangle
 \]
 \begin{align*}
-  S_G &= \{\bullet\} \quad\text{(single state)}\\
-  ta^G(\bullet) &= p \in T \quad\text{(period, a TIME value)}\\
-  \delta^G_{\text{int}}(\bullet) &= \bullet \\
-  \lambda^G(\bullet) &= \text{tick signal}
+  S_G &= T \quad\text{(time elapsed since last event)}\\
+  ta^G(s) &= p - s \quad\text{(remaining time to next event)}\\
+  \delta^G_{\text{int}}(s) &= 0 \quad\text{(reset elapsed time)}\\
+  \delta^G_{\text{ext}}(s, e, x) &= \text{undefined} \quad
+    \text{(no external input; formally required but unreachable)}\\
+  \lambda^G(s) &= \text{output signal}
 \end{align*}
+
+The initial state $s_0 \in T$ sets the elapsed time at simulation start.
+Choosing $s_0 = 0$ schedules the first event at $t = p$; choosing
+$s_0 \in (0, p)$ offsets the first firing to $t = p - s_0$, which can be used
+to avoid synchronisation with other periodic components.
 
 $G_{1/10}$ uses $p = 1/10$ and outputs a tick value of $1$.
 $G_1$ uses $p = 1$ and outputs a reset signal.
@@ -53,15 +68,28 @@ $G_1$ uses $p = 1$ and outputs a reset signal.
 
 \subsubsection*{Coupling}
 
-Both generators route to $K$.  The coupling notation below uses named
-channels for clarity; the IA-DEVS implementation encodes the signal in the
-message value (see implementation notes).
+Both generators route to $K$; $K$'s output becomes the coupled model output.
+Coupling is expressed via influencer sets $I$ and translation functions $Z$:
 
+\paragraph{Influencer sets.}
 \begin{align*}
-  \text{IC}  &= \{(G_{1/10}.\texttt{out} \to K.\texttt{add}),\;
-                  (G_1.\texttt{out} \to K.\texttt{reset})\} \\
-  \text{EOC} &= \{(K.\texttt{out} \to N.\texttt{out})\}
+  I_{G_{1/10}} &= \emptyset \\
+  I_{G_1}      &= \emptyset \\
+  I_K          &= \{G_{1/10},\; G_1\} \\
+  I_N          &= \{K\}
 \end{align*}
+
+\paragraph{Translation functions (Z).}
+\begin{align*}
+  Z_{G_{1/10},\,K}(y) &= y \\
+  Z_{G_1,\,K}(y)      &= y \\
+  Z_{K,\,N}(y)        &= y
+\end{align*}
+
+All three $Z$ functions are identity because every component shares the same
+value type and signals are distinguished by value rather than by channel
+(see Implementation Notes).  $I_N = \{K\}$ plays the role of the external
+output coupling: $K$'s output is the output of the coupled model $N$.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection*{Selected Approximations}
@@ -84,33 +112,44 @@ $[1,1]$ and $[0,0]$.
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection*{IA-DEVS Resulting Model}
 
-With the approximations above, the interval counterparts of the transitions
-are:
+With the approximations above, the IA-DEVS functions for each component are
+given below.  Function names follow the IA-DEVS convention from~\cite{VDW21}:
+$\mathrm{TA}$, $\Lambda$, $\Delta_{\text{int}}$, $\Delta_{\text{ext}}$ are
+the interval-lifted counterparts of the scalar $ta$, $\lambda$,
+$\delta_{\text{int}}$, $\delta_{\text{ext}}$.  Tilde ($\tilde{\phantom{n}}$)
+denotes an interval-valued quantity.
 
-\subsubsection*{Generator (interval)}
+\subsubsection*{Generator (IA-DEVS)}
+
+State $\sigma \in \mathcal{I}(T)$ (interval of elapsed-time values).
+For this experiment $\sigma_0 = [0,0]$; $\Delta_{\text{int}}$ resets to
+$[0,0]$ after each event.
+
 \begin{align*}
-  \tilde{ta}^G(\tilde{\bullet}) &= [p,\; p] \quad\text{(point interval period)}\\
-  \tilde{\delta}^G_{\text{int}}(\tilde{\bullet}) &= \tilde{\bullet} \\
-  \tilde{\lambda}^G(\tilde{\bullet}) &= [v,\; v]
+  \mathrm{TA}^G(\sigma) &= [p,\; p] - \sigma
+    \quad\text{(interval subtraction; point for exact arithmetic)}\\
+  \Delta^G_{\text{int}}(\sigma) &= [0,\; 0] \\
+  \Lambda^G(\sigma) &= [v,\; v]
     \quad (v=1\text{ for }G_{1/10},\; v=0\text{ for }G_1)
 \end{align*}
 
-\subsubsection*{Counter $K$ (interval)}
+\subsubsection*{Counter $K$ (IA-DEVS)}
 
-Let $\tilde{n} \in \mathcal{I}(\mathbb{N})$.
+State $(\tilde{n},\, \text{mode})$ with $\tilde{n} \in \mathcal{I}(\mathbb{N})$
+and $\text{mode} \in \{\text{idle},\, \text{ready}\}$.
 
 \begin{align*}
-  \tilde{ta}^K(\tilde{n},\text{idle})  &= [\infty, \infty] \\
-  \tilde{ta}^K(\tilde{n},\text{ready}) &= [0, 0] \\
-  \tilde{\delta}^K_{\text{ext}}\!\left((\tilde{n},\text{idle}),\,
+  \mathrm{TA}^K(\tilde{n},\text{idle})  &= [\infty, \infty] \\
+  \mathrm{TA}^K(\tilde{n},\text{ready}) &= [0, 0] \\
+  \Delta^K_{\text{ext}}\!\left((\tilde{n},\text{idle}),\,
       \tilde{e},\, \tilde{x}\right)
     &= \begin{cases}
          (\tilde{n} + \tilde{x},\; \text{idle})  & 0 \notin \tilde{x} \\
          (\tilde{n},\;             \text{ready}) & \tilde{x} = [0,0]
        \end{cases} \\
-  \tilde{\delta}^K_{\text{int}}((\tilde{n},\text{ready}))
+  \Delta^K_{\text{int}}((\tilde{n},\text{ready}))
     &= ([0,0],\; \text{idle}) \\
-  \tilde{\lambda}^K(\tilde{n},\text{ready})
+  \Lambda^K(\tilde{n},\text{ready})
     &= \tilde{n}
 \end{align*}
 
@@ -132,10 +171,11 @@ $K$ always outputs the point interval $[10,\,10]$.
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection*{Implementation Notes (CadmIA)}
 
-\paragraph{Portless coupling.}
-UA-DEVS and IA-DEVS do not define ports; coupling is by value.  Both
-generators route to $K$'s single \texttt{input\_t = int}.  The reset signal
-is encoded as value $0$; any non-zero value is a tick.
+\paragraph{Z-function encoding.}
+UA-DEVS and IA-DEVS couple via Z functions, not ports; all three Z functions
+in this model are identity (see Coupling above).  Both generators route to
+$K$'s single \texttt{input\_t = int}.  The reset signal is encoded as value
+$0$; any non-zero value is a tick.
 
 \begin{center}
 \begin{tabular}{@{}ll@{}}

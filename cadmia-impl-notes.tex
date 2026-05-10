@@ -36,15 +36,22 @@ there.
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection*{TIME Type}
 
-The type used for time values in a CadmIA model may be \emph{any type that is
-a valid TIME type in Cadmium or CDBoost}: floating-point types
-(\texttt{float}, \texttt{double}), fixed-point rational types
-(\texttt{decimal<N>}), integer types, or any user-defined totally-ordered
-arithmetic type.
+The interval type for time is \texttt{interval<T>} for any scalar \texttt{T}.
+Any type that is a valid TIME type in Cadmium or CDBoost is also a valid
+\texttt{T}: fixed-point rational types (\texttt{decimal<N>}), integer types, and
+any user-defined totally-ordered arithmetic type.
 
-The interval type for time is therefore \texttt{interval<T>} for any such
-\texttt{T} --- not exclusively \texttt{interval<decimal<N>>}.  The choice of
-\texttt{T} is an approximation decision recorded in each experiment's spec.
+Floating-point types (\texttt{float}, \texttt{double}) are known to introduce
+causality errors in Cadmium and CDBoost when period values are not exactly
+representable.  In CadmIA, \texttt{float} and \texttt{double} are also valid
+\texttt{T} choices, and \emph{they produce correct IA-DEVS results} provided the
+arithmetic obeys the outward-rounding convention: lower-bound computations use
+round-toward-$-\infty$ and upper-bound computations use round-toward-$+\infty$.
+This is not the IEEE~754 default mode; see the Floating-Point paragraph of the
+Outward-Rounding Invariant section for the required setup.
+
+The choice of \texttt{T} is an approximation decision recorded in each
+experiment's spec.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection*{Outward-Rounding Invariant}
@@ -79,21 +86,61 @@ use directed rounding:
 Experiments that use floating-point TIME must document whether directed
 rounding is applied, and if not, what approximation error is being accepted.
 
+\textbf{Compiler note.}  Many compilers apply floating-point optimizations
+(reassociation, contraction, flush-to-zero) that silently violate the active
+rounding mode set by \texttt{fesetround}.  To ensure directed rounding is
+actually respected, disable these optimizations explicitly.  With GCC and
+Clang, the relevant flags are \texttt{-frounding-math} (honours the runtime
+rounding mode) and \texttt{-fno-unsafe-math-optimizations} (or equivalently,
+avoiding \texttt{-ffast-math}).  Without these flags, interval endpoints may be
+rounded in the wrong direction even when the correct rounding mode is set at
+runtime.
+
 \paragraph{Integer types.}
 Integers are exact; intervals may always be point intervals when the modelled
 quantity is an integer.
 
 % ─────────────────────────────────────────────────────────────────────────────
-\subsection*{Portless Coupling}
+\subsection*{Z-Function Coupling}
 
-UA-DEVS and IA-DEVS, as defined in VDW21, do not include ports in their
-formalism.  Ports are a feature of PDEVS-with-ports (the formalism Cadmium
-implements), not of DEVS or its uncertainty extensions.  CadmIA therefore
-connects components via a single untyped channel per pair; the message
-\emph{value} distinguishes signal semantics.
+UA-DEVS and IA-DEVS, as defined in~\cite{VDW21}, couple components through
+\emph{translation functions} $Z_{i,d}$, one per influencer pair $(i, d)$.
+$Z_{i,d}$ maps the output of component $i$ to the input of component $d$;
+the influencer set $I_d$ lists every $i$ that can send to $d$, and $I_N$
+captures which components contribute to the coupled model's own output.
+The $Z$-function mechanism is inherited from Zeigler's original DEVS coupled
+formalism~\cite{Zeigler00}, carried into the uncertainty extensions of
+UA-DEVS and IA-DEVS.
 
-This is a correct implementation of the formalism, not a missing feature.
-Each experiment spec must document the value-to-signal encoding it uses.
+Ports are a feature of PDEVS-with-ports (the formalism Cadmium implements),
+not of DEVS or its uncertainty extensions.  CadmIA implements the formalism
+faithfully: each component pair $(i, d) \in I$ is registered with a
+\texttt{translation\_fn} (the Z function), and the coordinator applies it
+whenever $i$ fires and $d \in I_d$.
+
+When all components share the same value type, $Z_{i,d}$ is often the
+identity function; signal semantics are then distinguished by value rather
+than by channel.  Each experiment spec must document its value-encoding
+convention and the Z functions it uses.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{From Formalism to C++ Implementation}
+
+The IA-DEVS atomic functions --- $\mathrm{TA}$, $\Lambda$,
+$\Delta_{\text{int}}$, $\Delta_{\text{ext}}$ --- are defined over interval
+states and interval values, but they are \emph{not called directly} by the
+simulator engine.  The simulation algorithms from~\cite{VDW21} (the Bound
+procedures) interleave these functions with interval bookkeeping: computing
+$t_{\text{next}}$ as $t_{\text{last}} \oplus \mathrm{TA}(s)$, resolving
+simultaneous imminence, and routing outputs through $Z$ functions before
+calling $\Delta_{\text{ext}}$.
+
+What the C++ atomic model actually provides is the \emph{raw} $\mathrm{TA}$,
+$\Lambda$, $\Delta_{\text{int}}$, $\Delta_{\text{ext}}$ as member functions.
+The simulator (CadmIA's \texttt{simulator} and \texttt{coordinator}) combines
+them in one Bound step during \texttt{engine\_star} / \texttt{engine\_x}.
+Model authors therefore implement the four atomic functions; the combined
+Bound logic is the engine's responsibility.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection*{SELECT Function}

@@ -1,11 +1,11 @@
 # CadmIA Experiments
 
-Reproduction of the tick-counter study using the CadmIA C++23 IA-DEVS simulator,
+A collection of experiments using the CadmIA C++23 IA-DEVS simulator,
 where time and values are represented as intervals rather than scalars.
 
 ## What this repository is about
 
-CadmIA implements Interval-Arithmetic DEVS (IA-DEVS), a formalism in which every
+CadmIA implements Interval-Approximated DEVS (IA-DEVS), a formalism in which every
 quantity carries an interval uncertainty.  The simulator is the C++23 successor to
 Cadmium, built on C++ Concepts for type-safe interval-time models.
 
@@ -13,9 +13,6 @@ The underlying formalism is defined in:
 
 > Vicino, Wainer, Dalle. *Uncertainty on Discrete-Event System Simulation.*
 > ACM TOMACS, Vol. 32, No. 1, Article 2, 2021. DOI: 10.1145/3466169.
-
-These experiments apply the tick-counter model from VDW14 in the IA-DEVS setting to
-show how interval arithmetic propagates the uncertainty introduced by discretized time.
 
 ## Structure
 

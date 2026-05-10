@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
-#include <cadmia/engine/coordinator.hpp>
-#include <cadmia/engine/engine.hpp>
+#include <cadmia/engine/root_coordinator.hpp>
 #include <cadmia/modeling/coupled.hpp>
 #include <cadmia/modeling/decimal.hpp>
 #include <cadmia/modeling/interval.hpp>
@@ -14,17 +13,45 @@
 #include <unordered_set>
 #include <vector>
 
-using dec3   = cadmia::modeling::decimal<3>;
-using time_i = cadmia::modeling::interval<dec3>;
+// ── TIME variant selection ────────────────────────────────────────────────────
+// Each variant is compiled as a separate executable by CMake.
 
-using TG = vdw14::tick_gen<dec3>;
-using RG = vdw14::reset_gen<dec3>;
-using K  = vdw14::k_counter<dec3>;
+#if defined(CADMIA_TIME_FLOAT)
+using SimTime                        = float;
+static constexpr const char *VARIANT = "float";
+static constexpr int N_RESETS        = 20;   // fewer: float intervals overlap sooner,
+static constexpr int MAX_STEPS       = 2000; // causing BFS branching per reset cycle
+static constexpr int MAX_BRANCHES    = 5000;
 
-// ── Simulation driver ─────────────────────────────────────────────────────────
+#elif defined(CADMIA_TIME_DOUBLE)
+using SimTime                        = double;
+static constexpr const char *VARIANT = "double";
+static constexpr int N_RESETS        = 20;
+static constexpr int MAX_STEPS       = 2000;
+static constexpr int MAX_BRANCHES    = 5000;
 
-static std::vector<std::pair<int, int>> run_experiment(int n_resets) {
-    const dec3 zero{};
+#elif defined(CADMIA_TIME_DECIMAL)
+using SimTime                        = cadmia::modeling::decimal<3>;
+static constexpr const char *VARIANT = "decimal<3>";
+static constexpr int N_RESETS        = 100;
+static constexpr int MAX_STEPS       = N_RESETS * 20;
+static constexpr int MAX_BRANCHES    = 1000;
+
+#else
+#error "Define CADMIA_TIME_DECIMAL, CADMIA_TIME_FLOAT, or CADMIA_TIME_DOUBLE"
+#endif
+
+// ── Model types ───────────────────────────────────────────────────────────────
+
+using TG     = vdw14::tick_gen<SimTime>;
+using RG     = vdw14::reset_gen<SimTime>;
+using K      = vdw14::k_counter<SimTime>;
+using time_i = cadmia::modeling::interval<SimTime>;
+
+// ── Model construction ────────────────────────────────────────────────────────
+
+static cadmia::modeling::CoupledModel<SimTime> build_model() {
+    const SimTime zero{};
     const time_i zero_i = time_i::closed(zero, zero);
 
     auto tg_s0 = cadmia::modeling::interval<TG::state_t>::closed(0, 0);
@@ -42,47 +69,44 @@ static std::vector<std::pair<int, int>> run_experiment(int n_resets) {
         return *names.begin();
     };
 
-    cadmia::modeling::CoupledModel<dec3>::component_map comps;
+    cadmia::modeling::CoupledModel<SimTime>::component_map comps;
     comps.emplace("K", cadmia::modeling::make_atomic_component<K>(k_s0, zero_i));
     comps.emplace("tick_gen", cadmia::modeling::make_atomic_component<TG>(tg_s0, zero_i));
     comps.emplace("reset_gen", cadmia::modeling::make_atomic_component<RG>(rg_s0, zero_i));
 
-    cadmia::modeling::CoupledModel<dec3>::influencer_map infl;
+    cadmia::modeling::CoupledModel<SimTime>::influencer_map infl;
     infl["tick_gen"]  = {};
     infl["reset_gen"] = {};
     infl["K"]         = {"tick_gen", "reset_gen"};
 
-    cadmia::modeling::CoupledModel<dec3>::translation_map trans;
+    cadmia::modeling::CoupledModel<SimTime>::translation_map trans;
     trans[{"tick_gen", "K"}]  = id;
     trans[{"reset_gen", "K"}] = id;
 
-    auto model = std::make_shared<const cadmia::modeling::CoupledModel<dec3>>(
-        std::move(comps), std::move(infl), std::move(trans), select_fn, zero);
+    return cadmia::modeling::CoupledModel<SimTime>(std::move(comps), std::move(infl),
+                                                   std::move(trans), select_fn, zero);
+}
 
-    cadmia::engine::coordinator<dec3> coord(model);
-    coord.init(zero_i);
+// ── Experiment runner ─────────────────────────────────────────────────────────
+
+static std::vector<std::pair<int, int>> run_experiment(int n_resets) {
+    const SimTime zero{};
+    const time_i zero_i = time_i::closed(zero, zero);
+
+    auto model = build_model();
+
+    cadmia::engine::RootCoordinator<SimTime> rc;
+    auto log = rc.simulate(model, zero_i, MAX_STEPS, MAX_BRANCHES);
 
     std::vector<std::pair<int, int>> outputs;
-    int steps       = 0;
-    const int limit = n_resets * 15 + 10;
-
-    while (!coord.t_next().is_empty() && steps < limit &&
-           static_cast<int>(outputs.size()) < n_resets) {
-        auto t       = coord.t_next();
-        auto actions = coord.compute_branches(t);
-        if (actions.empty())
-            break;
-
-        auto &action        = actions[0];
-        auto [comp_out, _u] = coord.execute_branch(action);
-
-        if (!action.engine_name.empty() && action.engine_name == "K" && comp_out.has_value()) {
-            auto val = std::any_cast<K::output_i_t>(*comp_out);
+    for (const auto &entry : log) {
+        if (entry.component == "K" && entry.raw_output.has_value()) {
+            auto val = std::any_cast<K::output_i_t>(*entry.raw_output);
             outputs.emplace_back(val.lower, val.upper);
+            if (static_cast<int>(outputs.size()) >= n_resets)
+                break;
         }
-        ++steps;
     }
-
     return outputs;
 }
 
@@ -102,8 +126,8 @@ static void print_stats(const std::vector<std::pair<int, int>> &outputs, int exp
             ++errors;
     }
 
-    std::cout << "  resets:  " << outputs.size() << "\n"
-              << "  errors:  " << errors << " ("
+    std::cout << "  resets collected : " << outputs.size() << "\n"
+              << "  non-[10,10] outputs: " << errors << " ("
               << (100.0 * errors / static_cast<double>(outputs.size())) << " %)\n"
               << "  histogram:\n";
     for (const auto &[v, cnt] : hist)
@@ -113,14 +137,13 @@ static void print_stats(const std::vector<std::pair<int, int>> &outputs, int exp
 // ── main ──────────────────────────────────────────────────────────────────────
 
 int main() {
-    const int n_resets = 100;
-
     std::cout << "VDW14 Tick-Counter Experiment (CadmIA IA-DEVS)\n"
-              << "tick_gen period=[100ms,100ms]  reset_gen period=[1s,1s]\n"
-              << "expected counter output = [10, 10] at every reset\n"
-              << "n_resets = " << n_resets << "\n\n";
+              << "TIME type       : " << VARIANT << "\n"
+              << "tick_gen period : 100 ms   reset_gen period: 1 s\n"
+              << "expected output : [10, 10] at every reset\n"
+              << "n_resets target : " << N_RESETS << "\n\n";
 
-    auto outputs = run_experiment(n_resets);
+    auto outputs = run_experiment(N_RESETS);
     print_stats(outputs, 10);
 
     return outputs.empty() ? 1 : 0;
