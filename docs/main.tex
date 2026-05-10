@@ -3,11 +3,15 @@
 \usepackage{booktabs}
 \usepackage{microtype}
 \usepackage{parskip}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
 
 \title{CadmIA Experiments\\
   \large Tick-Counter Reordering Study under Interval Arithmetic}
 \author{Damián Vicino}
 \date{2026}
+
+\setlength{\emergencystretch}{3em}
 
 \begin{document}
 \maketitle
@@ -20,5 +24,23 @@
 \clearpage
 \section{VDW14 Tick-Counter}
 \input{../vdw14/spec}
+
+\begin{thebibliography}{9}
+
+\bibitem{VDW21}
+  Damián Vicino, Gabriel A.\ Wainer, Olivier Dalle.
+  \textit{Uncertainty on Discrete-Event System Simulation.}
+  ACM Transactions on Modeling and Computer Simulation (TOMACS),
+  Vol.~32, No.~1, Article~2, September 2021.
+  \texttt{DOI:~10.1145/3466169}.
+
+\bibitem{VDW14}
+  Damián Vicino, Olivier Dalle, Gabriel A.\ Wainer.
+  \textit{A Data Type for Discretized Time Representation in DEVS.}
+  In \textit{Proc.\ 7th Intl.\ ICST Conf.\ on Simulation Tools and
+  Techniques (SIMUTOOLS)}, 2014.
+  \texttt{hal-01055555}.
+
+\end{thebibliography}
 
 \end{document}

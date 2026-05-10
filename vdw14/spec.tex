@@ -1,16 +1,13 @@
-\subsection*{References}
-\begin{itemize}
-  \item Damian Vicino, Gabriel A.\ Wainer, Olivier Dalle.
-        \textit{Uncertainty on Discrete-Event System Simulation.}
-        ACM Transactions on Modeling and Computer Simulation (TOMACS),
-        Vol.~32, No.~1, Article~2, September 2021, 27~pages.
-        \texttt{DOI:~10.1145/3466169}.
-        \textbf{Primary reference --- defines UA-DEVS and IA-DEVS.}
-  \item Damian Vicino, Olivier Dalle, Gabriel A.\ Wainer.
-        \textit{A Data Type for Discretized Time Representation in DEVS.}
-        SIMUTOOLS 2014. \texttt{hal-01055555}.
-        (Origin of the tick-counter experiment reproduced here.)
-\end{itemize}
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Overview}
+
+The tick-counter model from~\cite{VDW14} simulates a periodic tick source
+counted over time and periodically reset.  A fast generator fires every
+$1/10$\,s, a slow generator fires every $1$\,s, and a counter accumulates
+ticks and outputs the count on each reset; ideally the count is $10$ at
+every reset.  This experiment applies the IA-DEVS formalism~\cite{VDW21}
+to the same model, replacing scalar time with interval arithmetic and
+studying whether the enclosure guarantee eliminates causality errors.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection*{UA-DEVS Model}
@@ -60,12 +57,11 @@ Both generators route to $K$.  The coupling notation below uses named
 channels for clarity; the IA-DEVS implementation encodes the signal in the
 message value (see implementation notes).
 
-\[
-  \text{IC} = \{(G_{1/10}.\texttt{out} \to K.\texttt{add}),\;
-               (G_1.\texttt{out} \to K.\texttt{reset})\}
-  \qquad
-  \text{EOC} = \{(K.\texttt{out} \to N.\texttt{out})\}
-\]
+\begin{align*}
+  \text{IC}  &= \{(G_{1/10}.\texttt{out} \to K.\texttt{add}),\;
+                  (G_1.\texttt{out} \to K.\texttt{reset})\} \\
+  \text{EOC} &= \{(K.\texttt{out} \to N.\texttt{out})\}
+\end{align*}
 
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection*{Selected Approximations}
