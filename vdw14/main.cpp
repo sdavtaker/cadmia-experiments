@@ -19,16 +19,16 @@
 #if defined(CADMIA_TIME_FLOAT)
 using SimTime                        = float;
 static constexpr const char *VARIANT = "float";
-static constexpr int N_RESETS        = 20;   // fewer: float intervals overlap sooner,
-static constexpr int MAX_STEPS       = 2000; // causing BFS branching per reset cycle
-static constexpr int MAX_BRANCHES    = 5000;
+static constexpr int N_RESETS        = 9999;
+static constexpr int MAX_STEPS       = 145000;
+static constexpr int MAX_BRANCHES    = 50000;
 
 #elif defined(CADMIA_TIME_DOUBLE)
 using SimTime                        = double;
 static constexpr const char *VARIANT = "double";
-static constexpr int N_RESETS        = 20;
-static constexpr int MAX_STEPS       = 2000;
-static constexpr int MAX_BRANCHES    = 5000;
+static constexpr int N_RESETS        = 9999;
+static constexpr int MAX_STEPS       = 145000;
+static constexpr int MAX_BRANCHES    = 50000;
 
 #elif defined(CADMIA_TIME_DECIMAL)
 using SimTime                        = cadmia::modeling::decimal<3>;
