@@ -1,4 +1,4 @@
-# CadmIA Experiments
+# CadmIA Experiments [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/sdavtaker/cadmia-experiments/badge)](https://scorecard.dev/viewer/?uri=github.com/sdavtaker/cadmia-experiments)
 
 A collection of experiments using the CadmIA C++23 IA-DEVS simulator,
 where time and values are represented as intervals rather than scalars.
