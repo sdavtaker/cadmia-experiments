@@ -8,6 +8,7 @@
 #include "reset_gen.hpp"
 #include "tick_gen.hpp"
 #include <any>
+#include <cassert>
 #include <iostream>
 #include <map>
 #include <unordered_set>
@@ -66,6 +67,7 @@ static cadmia::modeling::CoupledModel<SimTime> build_model() {
             return "tick_gen";
         if (names.count("reset_gen"))
             return "reset_gen";
+        assert(!names.empty());
         return *names.begin();
     };
 
