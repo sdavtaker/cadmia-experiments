@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 #pragma once
 
-#include <cadmia/modeling/decimal.hpp>
 #include <cadmia/modeling/interval.hpp>
 
 #include <compare>
+#include <limits>
 
 namespace vdw14 {
 
@@ -61,7 +61,7 @@ namespace vdw14 {
                 return time_i_t::empty_interval();
             if (s.lower.phase == phase_t::ready && s.upper.phase == phase_t::ready)
                 return time_i_t::closed(time_t{}, time_t{});
-            return time_i_t::right_open(time_t{}, cadmia::modeling::plus_inf);
+            return time_i_t::right_open(time_t{}, std::numeric_limits<time_t>::infinity());
         }
     };
 

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 #pragma once
 
-#include <cadmia/modeling/decimal.hpp>
 #include <cadmia/modeling/interval.hpp>
 
 #include <concepts>

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BSD-2-Clause
-#include <cadmia/modeling/decimal.hpp>
 #include <cadmia/modeling/interval.hpp>
 
 #include "k_counter.hpp"
 #include "reset_gen.hpp"
 #include "tick_gen.hpp"
 #include <catch2/catch_test_macros.hpp>
+#include <cdcommons/time/decimal.hpp>
 
-using dec3 = cadmia::modeling::decimal<3>;
+using dec3 = cdcommons::time::decimal<3>;
 
 using TG = vdw14::tick_gen<dec3>;
 using RG = vdw14::reset_gen<dec3>;

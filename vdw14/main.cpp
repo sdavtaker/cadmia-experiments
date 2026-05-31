@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
+#ifdef CADMIA_TIME_DECIMAL
+#include <cdcommons/time/decimal.hpp>
+#endif
 #include <cadmia/engine/root_coordinator.hpp>
 #include <cadmia/modeling/coupled.hpp>
-#include <cadmia/modeling/decimal.hpp>
 #include <cadmia/modeling/interval.hpp>
 
 #include "k_counter.hpp"
@@ -32,7 +34,7 @@ static constexpr int MAX_STEPS       = 145000;
 static constexpr int MAX_BRANCHES    = 50000;
 
 #elif defined(CADMIA_TIME_DECIMAL)
-using SimTime                        = cadmia::modeling::decimal<3>;
+using SimTime                        = cdcommons::time::decimal<3>;
 static constexpr const char *VARIANT = "decimal<3>";
 static constexpr int N_RESETS        = 100;
 static constexpr int MAX_STEPS       = N_RESETS * 20;
