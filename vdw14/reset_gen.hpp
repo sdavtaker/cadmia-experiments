@@ -37,11 +37,16 @@ namespace vdw14 {
 
         static time_i_t time_advance(const state_i_t &) {
             if constexpr (requires { TIME::from_scaled(1000); }) {
-                // Exact fixed-point decimal.
+                // decimal<Scale>: 1000 ms = 1 s is exact.
                 const auto p = TIME::from_scaled(1000);
                 return time_i_t::closed(p, p);
+            } else if constexpr (!std::floating_point<TIME> &&
+                                 !requires { TIME{std::int32_t{1}, std::int32_t{10}}; }) {
+                // rsfp / mbfp: magnitude 10 = 10 × 100 ms = 1 s.
+                const auto p = TIME{std::int32_t{10}};
+                return time_i_t::closed(p, p);
             } else {
-                // 1.0 is exactly representable in all IEEE 754 formats; point interval.
+                // float / double: 1.0 is exact. rational: TIME{1} = 1/1 = 1 s.
                 const TIME p{1};
                 return time_i_t::closed(p, p);
             }

@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
-#ifdef CADMIA_TIME_DECIMAL
+#if defined(CADMIA_TIME_DECIMAL)
 #include <cdcommons/time/decimal.hpp>
+#elif defined(CADMIA_TIME_RATIONAL)
+#include <cdcommons/time/rational.hpp>
+#elif defined(CADMIA_TIME_RSFP)
+#include <cdcommons/time/rsfp.hpp>
+#elif defined(CADMIA_TIME_MBFP)
+#include <cdcommons/time/mbfp.hpp>
 #endif
 #include <cadmia/engine/root_coordinator.hpp>
 #include <cadmia/modeling/coupled.hpp>
@@ -36,12 +42,33 @@ static constexpr int MAX_BRANCHES    = 50000;
 #elif defined(CADMIA_TIME_DECIMAL)
 using SimTime                        = cdcommons::time::decimal<3>;
 static constexpr const char *VARIANT = "decimal<3>";
-static constexpr int N_RESETS        = 100;
-static constexpr int MAX_STEPS       = N_RESETS * 20;
-static constexpr int MAX_BRANCHES    = 1000;
+static constexpr int N_RESETS        = 9999;
+static constexpr int MAX_STEPS       = 145000;
+static constexpr int MAX_BRANCHES    = 50000;
+
+#elif defined(CADMIA_TIME_RATIONAL)
+using SimTime                        = cdcommons::time::rational<std::int32_t>;
+static constexpr const char *VARIANT = "rational<int32_t>";
+static constexpr int N_RESETS        = 9999;
+static constexpr int MAX_STEPS       = 145000;
+static constexpr int MAX_BRANCHES    = 50000;
+
+#elif defined(CADMIA_TIME_RSFP)
+using SimTime                        = cdcommons::time::rsfp<1, 10>;
+static constexpr const char *VARIANT = "rsfp<1,10>";
+static constexpr int N_RESETS        = 9999;
+static constexpr int MAX_STEPS       = 145000;
+static constexpr int MAX_BRANCHES    = 50000;
+
+#elif defined(CADMIA_TIME_MBFP)
+using SimTime                        = cdcommons::time::mbfp<10, -1>;
+static constexpr const char *VARIANT = "mbfp<10,-1>";
+static constexpr int N_RESETS        = 9999;
+static constexpr int MAX_STEPS       = 145000;
+static constexpr int MAX_BRANCHES    = 50000;
 
 #else
-#error "Define CADMIA_TIME_DECIMAL, CADMIA_TIME_FLOAT, or CADMIA_TIME_DOUBLE"
+#error "Define CADMIA_TIME_DECIMAL, CADMIA_TIME_RATIONAL, CADMIA_TIME_RSFP, CADMIA_TIME_MBFP, CADMIA_TIME_FLOAT, or CADMIA_TIME_DOUBLE"
 #endif
 
 // ── Model types ───────────────────────────────────────────────────────────────
