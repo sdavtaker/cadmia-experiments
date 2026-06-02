@@ -5,6 +5,7 @@
 
 #include <cfenv>
 #include <concepts>
+#include <cstdint>
 
 namespace vdw14 {
 
@@ -39,8 +40,16 @@ namespace vdw14 {
 
         static time_i_t time_advance(const state_i_t &) {
             if constexpr (requires { TIME::from_scaled(100); }) {
-                // Exact fixed-point decimal: period is representable without rounding.
+                // decimal<Scale>: 100 ms is exact.
                 const auto p = TIME::from_scaled(100);
+                return time_i_t::closed(p, p);
+            } else if constexpr (requires { TIME{1, 10}; }) {
+                // rational: construct 1/10 directly.
+                const auto p = TIME{1, 10};
+                return time_i_t::closed(p, p);
+            } else if constexpr (!std::floating_point<TIME>) {
+                // rsfp / mbfp: template params chosen so magnitude 1 = 100 ms.
+                const auto p = TIME{1};
                 return time_i_t::closed(p, p);
             } else {
                 // Floating-point: compute 1/10 with directed rounding so the

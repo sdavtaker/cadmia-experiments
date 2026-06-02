@@ -7,8 +7,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CADMIA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../simulators/cadmia"
     CACHE PATH "Path to cadmia source")
-set(CDCOMMONS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../simulators/cdcommons"
-    CACHE PATH "Path to cdcommons source")
 
 if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
@@ -19,23 +17,19 @@ set(CADMIA_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
 set(CADMIA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory("${CADMIA_DIR}" cadmia-build)
 
-set(CDCOMMONS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-add_subdirectory("${CDCOMMONS_DIR}" cdcommons-build)
+find_package(cdcommons CONFIG REQUIRED)
 
 # Testing
 find_package(Catch2 3 CONFIG REQUIRED)
 include(CTest)
 enable_testing()
 
-# Helper: build one executable per TIME variant (decimal, float, double).
+# Helper: build one executable per TIME variant (decimal, rational, rsfp, mbfp, float, double).
 # Usage: cadmia_add_time_variants(<name-prefix> <source>)
-# Produces: <name-prefix>-decimal, <name-prefix>-float, <name-prefix>-double
-#
-# float and double variants are compiled with -frounding-math and
-# -fno-unsafe-math-optimizations so that fesetround() calls in
-# interval arithmetic and model time-advance functions are respected.
+# Produces: <name-prefix>-decimal, <name-prefix>-rational, <name-prefix>-rsfp,
+#           <name-prefix>-mbfp, <name-prefix>-float, <name-prefix>-double
 function(cadmia_add_time_variants prefix source)
-    foreach(variant IN ITEMS decimal float double)
+    foreach(variant IN ITEMS decimal rational rsfp mbfp float double)
         set(target "${prefix}-${variant}")
         string(TOUPPER "${variant}" variant_upper)
         add_executable(${target} ${source})
@@ -46,8 +40,8 @@ function(cadmia_add_time_variants prefix source)
                 -frounding-math -fno-unsafe-math-optimizations)
         endif()
         target_link_libraries(${target} PRIVATE cadmia::cadmia)
-        if(variant STREQUAL "decimal")
-            target_link_libraries(${target} PRIVATE cdcommons)
+        if(NOT (variant STREQUAL "float" OR variant STREQUAL "double"))
+            target_link_libraries(${target} PRIVATE cdcommons::cdcommons)
         endif()
     endforeach()
 endfunction()
