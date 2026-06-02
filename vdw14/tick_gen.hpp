@@ -5,6 +5,7 @@
 
 #include <cfenv>
 #include <concepts>
+#include <cstdint>
 
 namespace vdw14 {
 
@@ -42,13 +43,13 @@ namespace vdw14 {
                 // decimal<Scale>: 100 ms is exact.
                 const auto p = TIME::from_scaled(100);
                 return time_i_t::closed(p, p);
-            } else if constexpr (requires { TIME{std::int32_t{1}, std::int32_t{10}}; }) {
+            } else if constexpr (requires { TIME{1, 10}; }) {
                 // rational: construct 1/10 directly.
-                const auto p = TIME{std::int32_t{1}, std::int32_t{10}};
+                const auto p = TIME{1, 10};
                 return time_i_t::closed(p, p);
             } else if constexpr (!std::floating_point<TIME>) {
                 // rsfp / mbfp: template params chosen so magnitude 1 = 100 ms.
-                const auto p = TIME{std::int32_t{1}};
+                const auto p = TIME{1};
                 return time_i_t::closed(p, p);
             } else {
                 // Floating-point: compute 1/10 with directed rounding so the

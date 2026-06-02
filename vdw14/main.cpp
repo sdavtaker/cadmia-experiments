@@ -17,6 +17,7 @@
 #include "tick_gen.hpp"
 #include <any>
 #include <cassert>
+#include <cstdint>
 #include <iostream>
 #include <map>
 #include <unordered_set>

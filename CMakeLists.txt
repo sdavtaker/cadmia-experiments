@@ -31,6 +31,10 @@ enable_testing()
 # float and double variants are compiled with -frounding-math and
 # -fno-unsafe-math-optimizations so that fesetround() calls in
 # interval arithmetic and model time-advance functions are respected.
+# Helper: build one executable per TIME variant (decimal, rational, rsfp, mbfp, float, double).
+# Usage: cadmia_add_time_variants(<name-prefix> <source>)
+# Produces: <name-prefix>-decimal, <name-prefix>-rational, <name-prefix>-rsfp,
+#           <name-prefix>-mbfp, <name-prefix>-float, <name-prefix>-double
 function(cadmia_add_time_variants prefix source)
     foreach(variant IN ITEMS decimal rational rsfp mbfp float double)
         set(target "${prefix}-${variant}")
