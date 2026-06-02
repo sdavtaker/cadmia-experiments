@@ -24,13 +24,6 @@ find_package(Catch2 3 CONFIG REQUIRED)
 include(CTest)
 enable_testing()
 
-# Helper: build one executable per TIME variant (decimal, float, double).
-# Usage: cadmia_add_time_variants(<name-prefix> <source>)
-# Produces: <name-prefix>-decimal, <name-prefix>-float, <name-prefix>-double
-#
-# float and double variants are compiled with -frounding-math and
-# -fno-unsafe-math-optimizations so that fesetround() calls in
-# interval arithmetic and model time-advance functions are respected.
 # Helper: build one executable per TIME variant (decimal, rational, rsfp, mbfp, float, double).
 # Usage: cadmia_add_time_variants(<name-prefix> <source>)
 # Produces: <name-prefix>-decimal, <name-prefix>-rational, <name-prefix>-rsfp,
