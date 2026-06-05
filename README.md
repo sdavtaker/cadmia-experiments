@@ -48,5 +48,7 @@ cmake --build build -j2
 ctest --test-dir build
 ```
 
-Simulation executables write NDJSON logs to stdout.
-See [`doc/log-format.md`](https://github.com/sdavtaker/cadmia/blob/main/doc/log-format.md) in the CadmIA repository for the log schema.
+Each simulator can produce a full per-event structured log, but at experiment scale
+(~10 000 resets, ~145 000 simulation steps) that log would be very large.
+These experiments suppress log output and collect statistics directly instead,
+reporting reset count, error rate, and output histogram.
