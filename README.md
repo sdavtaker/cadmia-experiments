@@ -49,4 +49,4 @@ ctest --test-dir build
 ```
 
 Simulation executables write NDJSON logs to stdout.
-See the CadmIA simulator's `doc/log-format.md` for the log schema.
+See [`doc/log-format.md`](https://github.com/sdavtaker/cadmia/blob/main/doc/log-format.md) in the CadmIA repository for the log schema.
