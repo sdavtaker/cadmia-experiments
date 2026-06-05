@@ -36,7 +36,9 @@ CMakeLists.txt           Root build configuration.
 
 ## Building
 
-Requires CMake, vcpkg, and g++-14 (C++23 Concepts).
+Requires CMake 3.28+, vcpkg, and g++-14 (C++23 Concepts).
+The `vcpkg-configuration.json` in this repository pre-configures the private registry that
+provides the `cadmia` and `cdcommons` packages — no manual registry setup is needed.
 
 ```sh
 cmake -B build -S . \
@@ -47,4 +49,4 @@ ctest --test-dir build
 ```
 
 Simulation executables write NDJSON logs to stdout.
-See `simulators/cadmia/docs/log-format.md` for the log schema.
+See the CadmIA simulator's `doc/log-format.md` for the log schema.
