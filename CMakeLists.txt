@@ -46,6 +46,7 @@ function(cadmia_add_time_variants prefix source)
 endfunction()
 
 add_subdirectory(vdw14)
+add_subdirectory(vdw21)
 
 # Code Formatting
 find_program(CLANG_FORMAT
@@ -58,6 +59,8 @@ if(CLANG_FORMAT)
         CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/vdw14/*.hpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/vdw14/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/vdw21/*.hpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/vdw21/*.cpp"
     )
 
     add_custom_target(experiments-format

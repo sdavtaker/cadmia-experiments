@@ -9,7 +9,7 @@
 namespace vdw14 {
 
     // k_counter: counts non-zero inputs; zero input triggers output and reset.
-    // Encoding: input == [0,0] → reset signal; input with nonzero bounds → tick.
+    // Encoding: input == [0,0] → reset signal; input > 0 → tick; input [0,k>0] → concurrent.
     // State (phase, count): idle = accumulating; ready = output pending.
     template <typename TIME> struct k_counter {
         using time_t   = TIME;
@@ -47,6 +47,13 @@ namespace vdw14 {
             if (x.lower == 0 && x.upper == 0) {
                 return state_i_t::closed(state_t{phase_t::ready, s.lower.count},
                                          state_t{phase_t::ready, s.upper.count});
+            }
+            // Concurrent reset+tick: x spans [0, k>0].  Produce a non-punctual state
+            // following the cadmia counter [Add,Reset] widening pattern so that the
+            // output interval widens outward rather than creating a spurious point output.
+            if (x.lower == 0 && x.upper > 0) {
+                return state_i_t::closed(state_t{phase_t::idle, s.lower.count},
+                                         state_t{phase_t::ready, s.upper.count + x.upper});
             }
             return state_i_t::closed(state_t{phase_t::idle, s.lower.count + x.lower},
                                      state_t{phase_t::idle, s.upper.count + x.upper});
