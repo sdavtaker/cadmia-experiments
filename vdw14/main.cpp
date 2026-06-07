@@ -192,7 +192,21 @@ static void print_stats(const std::vector<KOutput> &outputs, int expected) {
               << "  times that include [" << expected << "," << expected
               << "]  : " << times_with_correct << "\n"
               << "  times missing  [" << expected << "," << expected
-              << "]  : " << times_without_correct << "\n";
+              << "]  : " << times_without_correct << "\n"
+              ;
+    if (by_time.size() <= 20) {
+        // Count firings per time (only when table is small enough to be useful)
+        std::map<std::string, long long> cnt_by_time;
+        for (const auto &o : outputs)
+            ++cnt_by_time[o.time];
+        std::cout << "  all reset times (t, branches, values):\n";
+        for (const auto &[t, vals] : by_time) {
+            std::cout << "    t=" << t << "  branches=" << cnt_by_time[t] << "  values:";
+            for (const auto &[lo, hi] : vals)
+                std::cout << " [" << lo << "," << hi << "]";
+            std::cout << "\n";
+        }
+    }
     if (times_without_correct > 0) {
         std::cout << "  (first 5 missing times):\n";
         int shown = 0;
