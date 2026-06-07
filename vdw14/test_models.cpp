@@ -112,6 +112,45 @@ TEST_CASE("k_counter internal_transition resets to idle 0", "[k_counter]") {
     REQUIRE(s2.lower.count == 0);
 }
 
+TEST_CASE("k_counter concurrent reset+tick produces non-punctual state", "[k_counter]") {
+    K::state_i_t s0 =
+        K::state_i_t::closed(K::state_t{phase_t::idle, 9}, K::state_t{phase_t::idle, 9});
+    K::input_i_t x = K::input_i_t::closed(0, 1); // [reset, tick]
+    K::time_i_t e  = K::time_i_t::closed(dec3{}, dec3{});
+    auto s1        = K::external_transition(s0, e, x);
+    REQUIRE(s1.lower.phase == phase_t::idle);
+    REQUIRE(s1.lower.count == 9);
+    REQUIRE(s1.upper.phase == phase_t::ready);
+    REQUIRE(s1.upper.count == 10);
+}
+
+TEST_CASE("k_counter mixed state output spans [lo, hi]", "[k_counter]") {
+    K::state_i_t s =
+        K::state_i_t::closed(K::state_t{phase_t::idle, 9}, K::state_t{phase_t::ready, 10});
+    auto out = K::output(s);
+    REQUIRE(out.lower == 9);
+    REQUIRE(out.upper == 10);
+}
+
+TEST_CASE("k_counter mixed state time_advance is right_open [0, inf)", "[k_counter]") {
+    K::state_i_t s =
+        K::state_i_t::closed(K::state_t{phase_t::idle, 9}, K::state_t{phase_t::ready, 10});
+    auto ta = K::time_advance(s);
+    REQUIRE(ta.lower == dec3{});
+    REQUIRE(ta.lower_closed);
+    REQUIRE(!ta.upper_closed);
+}
+
+TEST_CASE("k_counter mixed state internal_transition resets to idle 0", "[k_counter]") {
+    K::state_i_t s =
+        K::state_i_t::closed(K::state_t{phase_t::idle, 9}, K::state_t{phase_t::ready, 10});
+    auto s2 = K::internal_transition(s);
+    REQUIRE(s2.lower.phase == phase_t::idle);
+    REQUIRE(s2.lower.count == 0);
+    REQUIRE(s2.upper.phase == phase_t::idle);
+    REQUIRE(s2.upper.count == 0);
+}
+
 TEST_CASE("k_counter idle state is passive", "[k_counter]") {
     K::state_i_t s =
         K::state_i_t::closed(K::state_t{phase_t::idle, 0}, K::state_t{phase_t::idle, 0});

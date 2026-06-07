@@ -1,0 +1,176 @@
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Overview}
+
+The 4-Generator / 1-Processor case study from~\cite{VDW21} (Section~7)
+demonstrates the IA-DEVS coupled-model algorithm on a small but non-trivial
+network.  Four identical generators each produce a job at a rate of
+approximately one per second; a single FIFO processor services jobs with a
+fixed 250\,ms processing time.  Because all four generators fire within the
+same time interval $[997,1005]$\,ms, the processor receives four overlapping
+external events, which exercises the confluence branch of Algorithm~1.
+The experiment reproduces Tables~1--5 from~\cite{VDW21} step by step,
+validating cadmIA's coordinator and simulator against the paper's reference
+values.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{UA-DEVS Model}
+
+The coupled model is
+\[
+  N = \langle X_N,\, Y_N,\, D,\, \{M_d\}_{d \in D},\, I,\, Z,\,
+      \textsc{Select} \rangle
+\]
+with $D = \{G_1, G_2, G_3, G_4, P\}$ and $X_N = \emptyset$.
+
+\subsubsection*{Generator $G_i$}
+
+\[
+  G_i = \langle S_G,\, T,\, \emptyset,\, Y_G,\;
+        \delta^G_{\text{int}},\, \delta^G_{\text{ext}},\,
+        \lambda^G,\, ta^G \rangle
+\]
+\begin{align*}
+  S_G    &= T \quad\text{(elapsed time since last event)}\\
+  ta^G(s) &= [997,1005]\,\text{ms} - s \\
+  \delta^G_{\text{int}}(s) &= 0 \\
+  \lambda^G(s) &= [1, 2]
+    \quad\text{(output is uncertain job-id; unused by $P$)}
+\end{align*}
+
+\subsubsection*{Processor $P$}
+
+\[
+  P = \langle S_P,\, T,\, X_P,\, Y_P,\;
+      \delta^P_{\text{int}},\, \delta^P_{\text{ext}},\,
+      \lambda^P,\, ta^P \rangle
+\]
+\begin{align*}
+  S_P &= T \times \mathbb{N}^*
+    \quad\text{(TOCJ $\times$ FIFO job-id queue; empty queue = passive)}\\
+  ta^P(\text{passive})  &= \infty \\
+  ta^P(\text{tocj}, q)  &= 250\,\text{ms} - \text{tocj} \\
+  \delta^P_{\text{ext}}\!\left(\text{passive},\, e,\, x\right)
+    &= (0,\; [x]) \\
+  \delta^P_{\text{ext}}\!\left((\text{tocj}, q),\, e,\, x\right)
+    &= (\text{tocj} + e,\; q \mathbin{+\!\!+} [x]) \\
+  \delta^P_{\text{int}}((\text{tocj}, q))
+    &= \begin{cases}
+         \text{passive}        & |q| = 1 \\
+         (0,\; \text{tail}(q)) & |q| > 1
+       \end{cases} \\
+  \lambda^P((\text{tocj}, q)) &= \text{head}(q)
+\end{align*}
+
+\subsubsection*{Coupling}
+
+\paragraph{Influencer sets.}
+\begin{align*}
+  I_{G_i} &= \emptyset \quad (i = 1,2,3,4) \\
+  I_P     &= \{G_1, G_2, G_3, G_4\}
+\end{align*}
+
+\paragraph{Translation functions ($Z$).}
+Each generator's output is translated to a punctual job-id before
+delivery to $P$; the actual generator output $[1,2]$ is discarded:
+\[
+  Z_{G_i,\,P}(y) = [i, i] \quad (i = 1,2,3,4)
+\]
+
+\paragraph{SELECT policy.}
+Alphabetical priority: $G_1 \prec G_2 \prec G_3 \prec G_4 \prec P$.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Selected Approximations}
+
+\paragraph{TIME type.}  \texttt{decimal<3>} (millisecond resolution).
+
+\paragraph{Generator period.}  Closed interval $[997,1005]$\,ms, representing
+genuine uncertainty in the generation rate as given in~\cite{VDW21}.
+
+\paragraph{Processing time.}  Point interval $[250,250]$\,ms (deterministic
+service time per~\cite{VDW21}).
+
+\paragraph{Job-id values.}  Point intervals $[i,i]$; the Z-function ignores the
+generator's uncertain output and assigns a deterministic job identity.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{IA-DEVS Resulting Model}
+
+\subsubsection*{Generator (IA-DEVS)}
+
+State $\sigma \in \mathcal{I}(T)$.  Initial state $\sigma_0 = [0,0]$.
+
+\begin{align*}
+  \mathrm{TA}^G(\sigma)             &= [997,1005]\,\text{ms} - \sigma \\
+  \Delta^G_{\text{int}}(\sigma)     &= [0,0] \\
+  \Delta^G_{\text{ext}}(\sigma, \tilde{e}, \tilde{x}) &= \sigma + \tilde{e} \\
+  \Lambda^G(\sigma)                 &= [1,2]
+\end{align*}
+
+\subsubsection*{Processor (IA-DEVS)}
+
+State $(\widetilde{\text{tocj}},\, \tilde{q}) \in \mathcal{I}(T) \times \mathcal{I}(\mathbb{N}^*)$;
+passive state represented as the empty interval.
+
+\begin{align*}
+  \mathrm{TA}^P(\emptyset) &= \emptyset \quad\text{(passive)} \\
+  \mathrm{TA}^P(\widetilde{\text{tocj}}, \tilde{q})
+    &= [250,250]\,\text{ms} - \widetilde{\text{tocj}} \\
+  \Delta^P_{\text{ext}}\!\left(\emptyset,\, \tilde{e},\, \tilde{x}\right)
+    &= ([0,0],\; [\tilde{x}]) \\
+  \Delta^P_{\text{ext}}\!\left((\widetilde{\text{tocj}}, \tilde{q}),\,
+      \tilde{e},\, \tilde{x}\right)
+    &= (\widetilde{\text{tocj}} + \tilde{e},\;
+       \tilde{q} \mathbin{+\!\!+} [\tilde{x}]) \\
+  \Delta^P_{\text{int}}\!\left((\widetilde{\text{tocj}}, \tilde{q})\right)
+    &= \begin{cases}
+         \emptyset & |\tilde{q}| = 1 \\
+         ([0,0],\; \widetilde{\text{tail}}(\tilde{q})) & |\tilde{q}| > 1
+       \end{cases} \\
+  \Lambda^P(\widetilde{\text{tocj}}, \tilde{q})
+    &= \widetilde{\text{head}}(\tilde{q})
+\end{align*}
+
+\subsubsection*{Reference Values (Tables 1--5 from~\cite{VDW21})}
+
+\begin{center}
+\begin{tabular}{@{}clll@{}}
+  \toprule
+  Step & Event & $P.\,t_{\text{last}}$ & $P.\,t_{\text{next}}$ \\
+  \midrule
+  0 (init) & --- & $[0,0]$ & passive \\
+  1 ($G_1$ fires) & $G_1 \to P$ & $[997,1005]$\,ms & $[1247,1255]$\,ms \\
+  2--4 ($G_2$--$G_4$ fire) & ext events & $[997,1005]$\,ms & $[1223,1255]$\,ms \\
+  5--7 ($P$ fires $\times 3$) & int events & $[1723,1755]$\,ms & $[1973,2005]$\,ms \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+After steps~2--4 the processor's TOCJ upper bound widens to $24$\,ms
+(accumulated elapsed uncertainty from three overlapping external events);
+this is algorithmically correct and confirmed by cadpya.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Implementation Notes (CadmIA)}
+
+\paragraph{Z-function encoding.}
+The Z function discards the generator's uncertain output $[1,2]$ and delivers
+a deterministic job-id $[i,i]$ to $P$.  This is implemented via
+\texttt{make\_translation<G::output\_i\_t, P::input\_i\_t>} with a capturing
+lambda.
+
+\paragraph{SELECT policy.}
+Implemented as a priority scan over the fixed order
+$\{$\texttt{G1},\texttt{G2},\texttt{G3},\texttt{G4},\texttt{P}$\}$.
+
+\paragraph{Bug discovered and fixed.}
+During implementation, cadmIA's \texttt{simulator::x()} was found to compute
+the elapsed-time upper bound as $t.\mathrm{upper} - t_{\mathrm{next}}.\mathrm{lower}$
+instead of $t.\mathrm{upper} - t_{\mathrm{last}}.\mathrm{lower}$.  This produced
+negative elapsed intervals (e.g.\ $1005 - 1247 = {-242}$\,ms) when $P$ received
+$G_2$--$G_4$'s events, causing \texttt{interval::closed} to throw.
+Fixed in cadmIA~0.4.1 (Algorithm~1, line~5 of~\cite{VDW21}).
+
+\paragraph{Implementation status.}
+Implemented and verified.  All 24 Table~1--5 validation tests pass.
+Source: \texttt{vdw21/test\_models.cpp}.
