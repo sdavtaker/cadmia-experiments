@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <iostream>
 #include <map>
+#include <set>
 #include <unordered_set>
 #include <vector>
 
@@ -122,7 +123,13 @@ static cadmia::modeling::CoupledModel<SimTime> build_model() {
 
 // ── Experiment runner ─────────────────────────────────────────────────────────
 
-static std::vector<std::pair<int, int>> run_experiment(int n_resets) {
+struct KOutput {
+    std::string time; // time interval string from log entry
+    int lo{};
+    int hi{};
+};
+
+static std::vector<KOutput> run_experiment(int n_resets) {
     const SimTime zero{};
     const time_i zero_i = time_i::closed(zero, zero);
 
@@ -131,11 +138,11 @@ static std::vector<std::pair<int, int>> run_experiment(int n_resets) {
     cadmia::engine::RootCoordinator<SimTime> rc;
     auto log = rc.simulate(model, zero_i, MAX_STEPS, MAX_BRANCHES);
 
-    std::vector<std::pair<int, int>> outputs;
+    std::vector<KOutput> outputs;
     for (const auto &entry : log) {
         if (entry.component == "K" && entry.raw_output.has_value()) {
             auto val = std::any_cast<K::output_i_t>(*entry.raw_output);
-            outputs.emplace_back(val.lower, val.upper);
+            outputs.push_back({entry.time, val.lower, val.upper});
             if (static_cast<int>(outputs.size()) >= n_resets)
                 break;
         }
@@ -145,26 +152,61 @@ static std::vector<std::pair<int, int>> run_experiment(int n_resets) {
 
 // ── Statistics ────────────────────────────────────────────────────────────────
 
-static void print_stats(const std::vector<std::pair<int, int>> &outputs, int expected) {
+static void print_stats(const std::vector<KOutput> &outputs, int expected) {
     if (outputs.empty()) {
         std::cout << "  no outputs collected\n";
         return;
     }
 
+    // Per-value histogram across all branches
     long long errors = 0;
     std::map<std::pair<int, int>, long long> hist;
-    for (const auto &[lo, hi] : outputs) {
-        ++hist[{lo, hi}];
-        if (lo != expected || hi != expected)
+    for (const auto &o : outputs) {
+        ++hist[{o.lo, o.hi}];
+        if (o.lo != expected || o.hi != expected)
             ++errors;
     }
 
-    std::cout << "  resets collected : " << outputs.size() << "\n"
-              << "  non-[10,10] outputs: " << errors << " ("
+    std::cout << "  total K firings  : " << outputs.size() << "\n"
+              << "  non-[10,10] firings: " << errors << " ("
               << (100.0 * errors / static_cast<double>(outputs.size())) << " %)\n"
               << "  histogram:\n";
     for (const auto &[v, cnt] : hist)
         std::cout << "    [" << v.first << ", " << v.second << "] x " << cnt << "\n";
+
+    // Per-reset-time coverage: group outputs by time string, check if [10,10] present
+    std::map<std::string, std::set<std::pair<int, int>>> by_time;
+    for (const auto &o : outputs)
+        by_time[o.time].insert({o.lo, o.hi});
+
+    long long times_with_correct    = 0;
+    long long times_without_correct = 0;
+    for (const auto &[t, vals] : by_time) {
+        if (vals.count({expected, expected}))
+            ++times_with_correct;
+        else
+            ++times_without_correct;
+    }
+
+    std::cout << "\n  distinct reset times    : " << by_time.size() << "\n"
+              << "  times that include [" << expected << "," << expected
+              << "]  : " << times_with_correct << "\n"
+              << "  times missing  [" << expected << "," << expected
+              << "]  : " << times_without_correct << "\n";
+    if (times_without_correct > 0) {
+        std::cout << "  (first 5 missing times):\n";
+        int shown = 0;
+        for (const auto &[t, vals] : by_time) {
+            if (!vals.count({expected, expected})) {
+                std::cout << "    t=" << t << "  outputs:";
+                for (const auto &[lo, hi] : vals)
+                    std::cout << " [" << lo << "," << hi << "]";
+                std::cout << "\n";
+                if (++shown >= 5)
+                    break;
+            }
+        }
+    }
 }
 
 // ── main ──────────────────────────────────────────────────────────────────────
