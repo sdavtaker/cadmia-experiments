@@ -41,8 +41,8 @@ static constexpr int MAX_STEPS       = 145000;
 static constexpr int MAX_BRANCHES    = 50000;
 
 #elif defined(CADMIA_TIME_DECIMAL)
-using SimTime                        = cdcommons::time::decimal<-3>;
-static constexpr const char *VARIANT = "decimal<-3>";
+using SimTime                        = cdcommons::time::decimal<3>;
+static constexpr const char *VARIANT = "decimal<3>";
 static constexpr int N_RESETS        = 9999;
 static constexpr int MAX_STEPS       = 145000;
 static constexpr int MAX_BRANCHES    = 50000;
