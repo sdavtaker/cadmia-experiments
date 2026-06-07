@@ -5,3 +5,5 @@ docs/*.blg
 docs/*.log
 docs/*.toc
 docs/*.out
+docs/*.pdf
+logs/
