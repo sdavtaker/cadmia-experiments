@@ -12,7 +12,7 @@
 #include <memory>
 #include <unordered_set>
 
-using dec3 = cdcommons::time::decimal<3>;
+using dec3 = cdcommons::time::decimal<-3>;
 
 using G = vdw21::generator<dec3>;
 using P = vdw21::processor<dec3>;

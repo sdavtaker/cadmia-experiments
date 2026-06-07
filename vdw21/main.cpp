@@ -15,7 +15,7 @@
 #include <string>
 #include <unordered_set>
 
-using dec3   = cdcommons::time::decimal<3>;
+using dec3   = cdcommons::time::decimal<-3>;
 using G      = vdw21::generator<dec3>;
 using P      = vdw21::processor<dec3>;
 using time_i = cadmia::modeling::interval<dec3>;
@@ -66,7 +66,7 @@ static cadmia::modeling::CoupledModel<dec3> build_4gp() {
 
 int main() {
     std::cout << "VWD21 Section 7: 4G+P coupled model (CadmIA IA-DEVS)\n"
-              << "TIME type : decimal<3>  (resolution 1 ms)\n"
+              << "TIME type : decimal<-3>  (resolution 1 ms)\n"
               << "Expected  : paper Tables 1-5\n\n";
 
     auto model = build_4gp();
