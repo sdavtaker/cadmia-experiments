@@ -20,20 +20,20 @@ The derivation proceeds in two steps.
         computable as $[0.01, 0.60]$ because only the endpoints are ever
         evaluated.
 
-        The set-to-interval mapping for each LBM component is a modelling
-        decision:
+        The set-to-interval mapping for each LBM component is:
         \begin{itemize}
           \item LG and servers: the UA-DEVS set $(0,+\infty)$ is
-            approximated by a chosen interval $[\sigma_L, \sigma_U]$ (or
-            $[s_L, s_U]$).  Using $(0,+\infty)$ directly yields the
-            trivial bound $P_{\mathrm{loss}} \in [0,1]$; tighter intervals
-            give more informative bounds at the cost of excluding
-            trajectories outside the chosen range.
+            represented directly as the IA-DEVS interval $(0,+\infty)$.
+            This is a valid IA-DEVS interval and produces the bound
+            $P_{\mathrm{loss}} \in [0,1]$.  Choosing a tighter interval
+            such as $[\sigma_L, \sigma_U]$ is a further modelling decision
+            that restricts which trajectories are included and yields more
+            informative bounds.
           \item WB: the UA-DEVS set $\{1,2\}$ is approximated by the
-            interval $[1,2]$.  Here the approximation is exact for integer
-            outputs (no values lie strictly between $1$ and $2$ in
-            $\mathbb{Z}$), but in general IA-DEVS intervals may
-            over-approximate the underlying set.
+            IA-DEVS interval $[1,2]$.  In general IA-DEVS intervals
+            over-approximate the underlying set; here the approximation
+            is exact for integer outputs since no integers lie strictly
+            between $1$ and $2$.
         \end{itemize}
 \end{enumerate}
 
