@@ -11,20 +11,21 @@ The derivation proceeds in two steps.
         $\{\delta(s,r) \mid r \in (0,1)\}$.  This set is an uncertain set
         in the sense of UA-DEVS~\cite{VDW21}.
   \item \textbf{UA-DEVS $\to$ IA-DEVS.}
-        The uncertain sets obtained in Step~1 are in general
-        \emph{uncomputable}: a UA-DEVS transition defined over a continuous
-        probability space assigns a next state drawn from an uncountable set
-        and cannot be reduced to a finite simulation algorithm.
-        Note that this is a computability issue, not a boundedness issue:
-        even a distribution with bounded support (e.g.\ $U(0,1)$) would
-        produce an uncomputable UA-DEVS specification.
-        We obtain a computable IA-DEVS model by selecting a finite closed
-        interval $[\sigma_L, \sigma_U]$ that covers a high-probability
-        region via quantile truncation, replacing the continuous uncertain
-        set with a computable interval that the IA-DEVS BFS can enumerate
-        and producing an over-approximation that contains all
-        STDEVS trajectories whose exponential samples fall within the
-        truncated support.
+        IA-DEVS represents each uncertain set as an \emph{interval} and
+        computes exclusively with its two endpoint values.
+        This is what makes IA-DEVS computable: any simulation step reduces
+        to a finite number of endpoint evaluations regardless of how many
+        values lie inside the interval.
+        Note that the interval need not be bounded: $[0,+\infty)$ is as
+        computable as $[0.01, 0.60]$ because only the endpoints are ever
+        evaluated.
+        The choice of interval is a modelling decision.
+        Using $(0,+\infty)$ for the firing-time interval is valid and yields
+        the over-approximation $P_{\mathrm{loss}} \in [0,1]$.
+        Using a tighter interval $[\sigma_L, \sigma_U]$ obtained by quantile
+        truncation of the exponential distribution gives a more informative
+        bound, at the cost of excluding STDEVS trajectories whose samples
+        fall outside the truncated support.
 \end{enumerate}
 
 % ─────────────────────────────────────────────────────────────────────────────
