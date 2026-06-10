@@ -31,36 +31,44 @@ The derivation proceeds in two steps.
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection*{Step 1: STDEVS to UA-DEVS Translation}
 
+The translation looks only at the \emph{observable outputs and reachable
+states} of each model component, not at the internal random mechanism used
+to select among them.  The specific distribution (exponential, uniform,
+Bernoulli, \ldots) is an implementation detail of the STDEVS model and
+does not appear in the UA-DEVS specification.
+
 \subsubsection*{Load Generator (LG)}
 
-The STDEVS transition is $\delta_{\text{int}}(s,r) = -(1/d_r)\ln r$,
-$r \sim U(0,1)$ (Activity~(b), CKW10 §7.2.1).
-The set of all reachable next states is
+The LG specification says: after each internal transition, the next
+inter-departure time is some positive value.  The set of all reachable
+next states is therefore
 \[
-  \bigl\{\,-(1/d_r)\ln r \;\big|\; r \in (0,1)\,\bigr\}
-  \;=\; (0,\, +\infty).
+  S^{LG}_{\text{next}} = (0,\, +\infty) \subset \mathbb{R}^+.
 \]
-The UA-DEVS transition maps state $s$ to the uncertain set $(0,+\infty)$
-independently of $s$ — the Poisson inter-departure time is i.i.d.
+The output is deterministic: always $(\mathit{task}_1,\, \texttt{out}_1)$.
 
 \subsubsection*{Weighted Balancer (WB)}
 
-The STDEVS routing decision is
-$\tilde p = \texttt{out}_1$ if $r < b_f$, else $\texttt{out}_2$.
-For $b_f \in (0,1)$ any $r$ makes either outcome possible, so the
-UA-DEVS transition maps each arriving task to the \emph{union} of two
-next states: one where the task is routed to $S1$ and one where it goes
-to $S2$.  In the IA-DEVS approximation this is handled by treating both
-paths as valid, producing an over-approximation of the system's
-trajectories.
+The WB specification says: each arriving task is routed to
+\emph{either} $\texttt{out}_1$ (server~$S1$) or $\texttt{out}_2$
+(server~$S2$) — both are possible outcomes.
+Encoding the output port as an integer
+($\texttt{out}_1 \mapsto 1,\; \texttt{out}_2 \mapsto 2$),
+the UA-DEVS uncertain output is the set $\{1,\, 2\}$, or in interval
+notation $[1,\, 2] \subset \mathbb{Z}$.
+The time advance after routing is $+\infty$ (WB becomes passive),
+which is deterministic.
 
 \subsubsection*{Servers S1 and S2}
 
-The STDEVS service time is $s_t = -(1/\mu)\ln r$, $r \sim U(0,1)$.
-The reachable set is $(0,+\infty)$.
+The server specification says: when the server is \emph{idle} and a
+task arrives, it begins service for some positive duration.  The set
+of all reachable service-time states is
+\[
+  S^{Si}_{\text{next}} = (0,\, +\infty) \subset \mathbb{R}^+.
+\]
 When the server is \emph{busy} and a task arrives, the task is dropped;
-this is a deterministic transition independent of $r$ and is preserved
-unchanged in UA-DEVS.
+this branch is deterministic and is preserved unchanged in UA-DEVS.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection*{Step 2: UA-DEVS to IA-DEVS Bounding}
