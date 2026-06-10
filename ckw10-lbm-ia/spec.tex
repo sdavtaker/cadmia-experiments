@@ -11,12 +11,20 @@ The derivation proceeds in two steps.
         $\{\delta(s,r) \mid r \in (0,1)\}$.  This set is an uncertain set
         in the sense of UA-DEVS~\cite{VDW21}.
   \item \textbf{UA-DEVS $\to$ IA-DEVS.}
-        The uncertain sets are in general unbounded (the support of an
-        exponential distribution is $(0,\infty)$).  We obtain computable
-        IA-DEVS intervals by truncating to a high-probability region using
-        quantiles of the underlying distribution, producing an
-        over-approximation in which all valid STDEVS trajectories are
-        contained.
+        The uncertain sets obtained in Step~1 are in general
+        \emph{uncomputable}: a UA-DEVS transition defined over a continuous
+        probability space assigns a next state drawn from an uncountable set
+        and cannot be reduced to a finite simulation algorithm.
+        Note that this is a computability issue, not a boundedness issue:
+        even a distribution with bounded support (e.g.\ $U(0,1)$) would
+        produce an uncomputable UA-DEVS specification.
+        We obtain a computable IA-DEVS model by selecting a finite closed
+        interval $[\sigma_L, \sigma_U]$ that covers a high-probability
+        region via quantile truncation, replacing the continuous uncertain
+        set with a computable interval that the IA-DEVS BFS can enumerate
+        and producing an over-approximation that contains all
+        STDEVS trajectories whose exponential samples fall within the
+        truncated support.
 \end{enumerate}
 
 % ─────────────────────────────────────────────────────────────────────────────
