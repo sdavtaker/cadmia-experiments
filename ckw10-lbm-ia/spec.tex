@@ -11,21 +11,30 @@ The derivation proceeds in two steps.
         $\{\delta(s,r) \mid r \in (0,1)\}$.  This set is an uncertain set
         in the sense of UA-DEVS~\cite{VDW21}.
   \item \textbf{UA-DEVS $\to$ IA-DEVS.}
-        IA-DEVS represents each uncertain set as an \emph{interval} and
-        computes exclusively with its two endpoint values.
-        This is what makes IA-DEVS computable: any simulation step reduces
-        to a finite number of endpoint evaluations regardless of how many
-        values lie inside the interval.
+        IA-DEVS approximates each UA-DEVS uncertain \emph{set} with an
+        \emph{interval} and computes exclusively with its two endpoint
+        values.  This is what makes IA-DEVS computable: any simulation step
+        reduces to a finite number of endpoint evaluations regardless of
+        how many values lie inside the interval.
         Note that the interval need not be bounded: $[0,+\infty)$ is as
         computable as $[0.01, 0.60]$ because only the endpoints are ever
         evaluated.
-        The choice of interval is a modelling decision.
-        Using $(0,+\infty)$ for the firing-time interval is valid and yields
-        the over-approximation $P_{\mathrm{loss}} \in [0,1]$.
-        Using a tighter interval $[\sigma_L, \sigma_U]$ obtained by quantile
-        truncation of the exponential distribution gives a more informative
-        bound, at the cost of excluding STDEVS trajectories whose samples
-        fall outside the truncated support.
+
+        The set-to-interval mapping for each LBM component is a modelling
+        decision:
+        \begin{itemize}
+          \item LG and servers: the UA-DEVS set $(0,+\infty)$ is
+            approximated by a chosen interval $[\sigma_L, \sigma_U]$ (or
+            $[s_L, s_U]$).  Using $(0,+\infty)$ directly yields the
+            trivial bound $P_{\mathrm{loss}} \in [0,1]$; tighter intervals
+            give more informative bounds at the cost of excluding
+            trajectories outside the chosen range.
+          \item WB: the UA-DEVS set $\{1,2\}$ is approximated by the
+            interval $[1,2]$.  Here the approximation is exact for integer
+            outputs (no values lie strictly between $1$ and $2$ in
+            $\mathbb{Z}$), but in general IA-DEVS intervals may
+            over-approximate the underlying set.
+        \end{itemize}
 \end{enumerate}
 
 % ─────────────────────────────────────────────────────────────────────────────
@@ -54,8 +63,7 @@ The WB specification says: each arriving task is routed to
 (server~$S2$) — both are possible outcomes.
 Encoding the output port as an integer
 ($\texttt{out}_1 \mapsto 1,\; \texttt{out}_2 \mapsto 2$),
-the UA-DEVS uncertain output is the set $\{1,\, 2\}$, or in interval
-notation $[1,\, 2] \subset \mathbb{Z}$.
+the UA-DEVS uncertain output is the set $\{1,\, 2\} \subset \mathbb{Z}$.
 The time advance after routing is $+\infty$ (WB becomes passive),
 which is deterministic.
 
