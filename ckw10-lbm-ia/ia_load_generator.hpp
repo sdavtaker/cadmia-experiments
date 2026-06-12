@@ -11,18 +11,19 @@
  * IA-DEVS spec (see ckw10-lbm-ia/spec.tex):
  *   state_t   = double   (elapsed time since last output)
  *   time_t    = double
- *   input_t   = int      (no meaningful input)
- *   output_t  = int      (task signal = 1)
+ *   input_t   = task_signal       (no meaningful input)
+ *   output_t  = task_signal       (task_signal::arrived)
  *
  *   TA(s)               = (0, +inf)
  *   Delta_int(s)        = [0, 0]
  *   Delta_ext(s, e, x)  = s + e   (accumulate elapsed)
- *   Lambda(s)           = [1, 1]
+ *   Lambda(s)           = [arrived, arrived]
  */
 
 #include <cadmia/concepts/iadevs_atomic_model.hpp>
 #include <cadmia/modeling/interval.hpp>
 
+#include "signals.hpp"
 #include <limits>
 
 namespace ckw10_lbm_ia {
@@ -32,8 +33,8 @@ namespace ckw10_lbm_ia {
         // ── Base type aliases (required by IADEVSAtomicModel) ─────────────────
         using state_t  = double;
         using time_t   = double;
-        using input_t  = int;
-        using output_t = int;
+        using input_t  = task_signal;
+        using output_t = task_signal;
 
         // ── Interval aliases ──────────────────────────────────────────────────
         using state_i_t  = cadmia::modeling::interval<state_t>;
@@ -53,7 +54,7 @@ namespace ckw10_lbm_ia {
         }
 
         [[nodiscard]] static output_i_t output(const state_i_t &) noexcept {
-            return output_i_t::closed(1, 1);
+            return output_i_t::closed(task_signal::arrived, task_signal::arrived);
         }
 
         [[nodiscard]] static time_i_t time_advance(const state_i_t &s) noexcept {

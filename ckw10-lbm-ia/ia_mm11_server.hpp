@@ -10,15 +10,15 @@
  * IA-DEVS spec (see ckw10-lbm-ia/spec.tex):
  *   state_t = double   (remaining service time; empty interval = idle)
  *   time_t  = double
- *   input_t = int      (arriving task signal)
- *   output_t = int     (completed task signal)
+ *   input_t  = task_signal        (arriving task)
+ *   output_t = completion_signal  (task_completed)
  *
- *   TA(empty)              = empty          (passive = idle)
- *   TA(s_tilde)            = s_tilde        (remaining service time)
- *   Delta_int(s)           = empty          (service completes; go idle)
- *   Delta_ext(empty, e, x) = (0, +inf)      (accept task; start service)
- *   Delta_ext(s, e, x)     = max(0, s - e)  (drop task; update remaining)
- *   Lambda(s)              = [1, 1]         (completed task signal)
+ *   TA(empty)              = empty                      (passive = idle)
+ *   TA(s_tilde)            = s_tilde                    (remaining service time)
+ *   Delta_int(s)           = empty                      (service completes; go idle)
+ *   Delta_ext(empty, e, x) = (0, +inf)                  (accept task; start service)
+ *   Delta_ext(s, e, x)     = max(0, s - e)              (drop task; update remaining)
+ *   Lambda(s)              = [task_completed, task_completed]
  *
  * A loss event occurs when Delta_ext is called on a non-empty (busy) state.
  * The caller is responsible for detecting and counting loss events.
@@ -27,6 +27,7 @@
 #include <cadmia/concepts/iadevs_atomic_model.hpp>
 #include <cadmia/modeling/interval.hpp>
 
+#include "signals.hpp"
 #include <limits>
 
 namespace ckw10_lbm_ia {
@@ -36,8 +37,8 @@ namespace ckw10_lbm_ia {
         // ── Base type aliases (required by IADEVSAtomicModel) ─────────────────
         using state_t  = double;
         using time_t   = double;
-        using input_t  = int;
-        using output_t = int;
+        using input_t  = task_signal;
+        using output_t = completion_signal;
 
         // ── Interval aliases ──────────────────────────────────────────────────
         using state_i_t  = cadmia::modeling::interval<state_t>;
@@ -62,7 +63,8 @@ namespace ckw10_lbm_ia {
         }
 
         [[nodiscard]] static output_i_t output(const state_i_t &) noexcept {
-            return output_i_t::closed(1, 1);
+            return output_i_t::closed(completion_signal::task_completed,
+                                      completion_signal::task_completed);
         }
 
         [[nodiscard]] static time_i_t time_advance(const state_i_t &s) noexcept {

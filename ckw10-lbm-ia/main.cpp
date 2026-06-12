@@ -110,7 +110,7 @@ int main() {
         lg_state = LG::internal_transition(lg_state);
 
         // Route task to server
-        const S::input_i_t task = S::input_i_t::closed(1, 1);
+        const S::input_i_t task = S::input_i_t::closed(task_signal::arrived, task_signal::arrived);
         server_state            = S::external_transition(server_state, elapsed_interval, task);
 
         // Check if server internal event (service completion) could have occurred
