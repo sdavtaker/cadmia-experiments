@@ -4,9 +4,9 @@
  * IA-DEVS Load Generator for the CKW10 LBM experiment.
  *
  * STDEVS source: inter-departure time ~ Exp(lambda_s) = -(1/lambda_s) * ln(r).
- * UA-DEVS translation: reachable set = (0, +inf).
- * IA-DEVS bound: closed interval [sigma_L, sigma_U] from 90% quantile
- * truncation of Exp(lambda_s).
+ * Support of Exp(lambda_s) is (0, +inf) — strictly positive, open at zero.
+ * The exponential distribution is memoryless, so the remaining time is always
+ * (0, +inf) regardless of elapsed time.
  *
  * IA-DEVS spec (see ckw10-lbm-ia/spec.tex):
  *   state_t   = double   (elapsed time since last output)
@@ -14,14 +14,16 @@
  *   input_t   = int      (no meaningful input)
  *   output_t  = int      (task signal = 1)
  *
- *   TA(sigma)           = [SIGMA_L, SIGMA_U] - sigma
- *   Delta_int(sigma)    = [0, 0]
+ *   TA(s)               = (0, +inf)
+ *   Delta_int(s)        = [0, 0]
  *   Delta_ext(s, e, x)  = s + e   (accumulate elapsed)
- *   Lambda(sigma)       = [1, 1]
+ *   Lambda(s)           = [1, 1]
  */
 
 #include <cadmia/concepts/iadevs_atomic_model.hpp>
 #include <cadmia/modeling/interval.hpp>
+
+#include <limits>
 
 namespace ckw10_lbm_ia {
 
@@ -38,13 +40,6 @@ namespace ckw10_lbm_ia {
         using time_i_t   = cadmia::modeling::interval<time_t>;
         using input_i_t  = cadmia::modeling::interval<input_t>;
         using output_i_t = cadmia::modeling::interval<output_t>;
-
-        // ── Inter-departure time interval (90% quantile of Exp(5)) ────────────
-        // lambda_s = b_f * d_r = 0.5 * 10 = 5   (per server, TS1 b_f = 0.5)
-        // sigma_L = q_{0.05}(5) = -ln(0.95)/5
-        // sigma_U = q_{0.95}(5) = -ln(0.05)/5
-        static constexpr double SIGMA_L = 0.010260; // ≈ -ln(0.95)/5
-        static constexpr double SIGMA_U = 0.599146; // ≈ -ln(0.05)/5
 
         // ── IA-DEVS functions (static, interval-valued) ───────────────────────
 
@@ -64,16 +59,7 @@ namespace ckw10_lbm_ia {
         [[nodiscard]] static time_i_t time_advance(const state_i_t &s) noexcept {
             if (s.is_empty())
                 return time_i_t::empty_interval();
-            const auto period = time_i_t::closed(SIGMA_L, SIGMA_U);
-            const auto raw    = period - s;
-            // Clamp lower bound to 0 (cannot be negative)
-            if (raw.is_empty())
-                return raw;
-            auto result         = raw;
-            result.lower_closed = true;
-            if (result.lower < 0.0)
-                result.lower = 0.0;
-            return result;
+            return time_i_t::open(0.0, std::numeric_limits<time_t>::infinity());
         }
     };
 

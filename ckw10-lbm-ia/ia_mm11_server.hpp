@@ -5,8 +5,7 @@
  *
  * STDEVS source: service time ~ Exp(mu) = -(1/mu) * ln(r); arriving tasks
  * are dropped when the server is busy (M/M/1/1 = no queue, finite capacity 1).
- * UA-DEVS translation: service time reachable set = (0, +inf).
- * IA-DEVS bound: [s_L, s_U] from 90% quantile truncation of Exp(mu).
+ * Support of Exp(mu) is (0, +inf) — strictly positive, open at zero.
  *
  * IA-DEVS spec (see ckw10-lbm-ia/spec.tex):
  *   state_t = double   (remaining service time; empty interval = idle)
@@ -14,12 +13,12 @@
  *   input_t = int      (arriving task signal)
  *   output_t = int     (completed task signal)
  *
- *   TA(empty)         = empty       (passive = idle)
- *   TA(s_tilde)       = s_tilde     (remaining service time)
- *   Delta_int(s)      = empty       (service completes; go idle)
- *   Delta_ext(empty, e, x) = [S_L, S_U]    (accept task; start service)
- *   Delta_ext(s, e, x)    = max(0, s - e)  (drop task; update remaining)
- *   Lambda(s)         = [1, 1]      (completed task signal)
+ *   TA(empty)              = empty          (passive = idle)
+ *   TA(s_tilde)            = s_tilde        (remaining service time)
+ *   Delta_int(s)           = empty          (service completes; go idle)
+ *   Delta_ext(empty, e, x) = (0, +inf)      (accept task; start service)
+ *   Delta_ext(s, e, x)     = max(0, s - e)  (drop task; update remaining)
+ *   Lambda(s)              = [1, 1]         (completed task signal)
  *
  * A loss event occurs when Delta_ext is called on a non-empty (busy) state.
  * The caller is responsible for detecting and counting loss events.
@@ -27,6 +26,8 @@
 
 #include <cadmia/concepts/iadevs_atomic_model.hpp>
 #include <cadmia/modeling/interval.hpp>
+
+#include <limits>
 
 namespace ckw10_lbm_ia {
 
@@ -44,13 +45,6 @@ namespace ckw10_lbm_ia {
         using input_i_t  = cadmia::modeling::interval<input_t>;
         using output_i_t = cadmia::modeling::interval<output_t>;
 
-        // ── Service time interval (90% quantile of Exp(5)) ────────────────────
-        // mu = 1 / s_t = 1 / 0.2 = 5   (TS1 parameters)
-        // s_L = q_{0.05}(5) = -ln(0.95)/5
-        // s_U = q_{0.95}(5) = -ln(0.05)/5
-        static constexpr double S_L = 0.010260; // ≈ -ln(0.95)/5
-        static constexpr double S_U = 0.599146; // ≈ -ln(0.05)/5
-
         // ── IA-DEVS functions (static, interval-valued) ───────────────────────
 
         [[nodiscard]] static state_i_t internal_transition(const state_i_t &) noexcept {
@@ -60,8 +54,8 @@ namespace ckw10_lbm_ia {
         [[nodiscard]] static state_i_t external_transition(const state_i_t &s, const time_i_t &e,
                                                            const input_i_t &) noexcept {
             if (s.is_empty()) {
-                // Idle: accept task, start service with interval service time
-                return state_i_t::closed(S_L, S_U);
+                // Idle: accept task; service time ~ Exp(mu), full support (0, +inf)
+                return state_i_t::open(0.0, std::numeric_limits<state_t>::infinity());
             }
             // Busy: drop arriving task; update remaining service time
             return clamp_non_negative(s - e);

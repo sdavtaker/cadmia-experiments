@@ -16,19 +16,19 @@ The derivation proceeds in two steps.
         values.  This is what makes IA-DEVS computable: any simulation step
         reduces to a finite number of endpoint evaluations regardless of
         how many values lie inside the interval.
-        Note that the interval need not be bounded: $[0,+\infty)$ is as
+        Note that the interval need not be bounded: $(0,+\infty)$ is as
         computable as $[0.01, 0.60]$ because only the endpoints are ever
         evaluated.
 
         The set-to-interval mapping for each LBM component is:
         \begin{itemize}
           \item LG and servers: the UA-DEVS set $(0,+\infty)$ is
-            represented directly as the IA-DEVS interval $(0,+\infty)$.
-            This is a valid IA-DEVS interval and produces the bound
-            $P_{\mathrm{loss}} \in [0,1]$.  Choosing a tighter interval
-            such as $[\sigma_L, \sigma_U]$ is a further modelling decision
-            that restricts which trajectories are included and yields more
-            informative bounds.
+            represented directly as the IA-DEVS interval $(0,+\infty)$,
+            the exact support of the exponential distribution.
+            The resulting loss bound is $P_{\mathrm{loss}} \in [0,1]$,
+            which is trivially correct; a tighter interval such as a
+            quantile-truncated $[\sigma_L, \sigma_U]$ yields more
+            informative bounds at the cost of excluding tail trajectories.
           \item WB: the UA-DEVS set $\{1,2\}$ is approximated by the
             IA-DEVS interval $[1,2]$.  In general IA-DEVS intervals
             over-approximate the underlying set; here the approximation
@@ -81,28 +81,6 @@ this branch is deterministic and is preserved unchanged in UA-DEVS.
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection*{Step 2: UA-DEVS to IA-DEVS Bounding}
 
-\paragraph{Exponential quantile bounds.}
-Let $q_\alpha$ denote the $\alpha$-quantile of $\mathrm{Exp}(\lambda)$:
-\[
-  q_\alpha(\lambda) = -\tfrac{1}{\lambda}\ln(1-\alpha).
-\]
-We truncate to the central $[q_{p_L},\, q_{1-p_L}]$ interval for
-a chosen tail probability $p_L$.
-
-\paragraph{Parameter values for TS1, per-server sub-model.}
-With $b_f = 0.5$, each server receives tasks at rate
-$\lambda_s = b_f d_r = 5$ and has service rate $\mu = 1/s_t = 5$.
-
-Using $p_L = 0.05$ (90\,\% central interval):
-\begin{align}
-  \tilde\sigma &\in [\sigma_L,\,\sigma_U]
-    = \bigl[q_{0.05}(5),\; q_{0.95}(5)\bigr]
-    \approx [0.0103,\; 0.5992]\,\text{s} \label{eq:sigma-interval}\\
-  \tilde s &\in [s_L,\,s_U]
-    = \bigl[q_{0.05}(5),\; q_{0.95}(5)\bigr]
-    \approx [0.0103,\; 0.5992]\,\text{s} \label{eq:s-interval}
-\end{align}
-
 \paragraph{WB routing over-approximation.}
 For tractability we decompose the two-server LBM into two independent
 $M/M/1/1$ sub-models, one per server, each with arrival rate
@@ -125,7 +103,7 @@ last departure; passive state = empty interval).
 
 \begin{align*}
   \mathrm{TA}^{\mathrm{LG}}(\tilde\sigma)
-    &= [\sigma_L,\sigma_U] - \tilde\sigma \\
+    &= (0,\,+\infty) \\
   \Delta^{\mathrm{LG}}_{\mathrm{int}}(\tilde\sigma)
     &= [0,\,0] \\
   \Delta^{\mathrm{LG}}_{\mathrm{ext}}(\tilde\sigma,\,\tilde e,\,\tilde x)
@@ -135,9 +113,11 @@ last departure; passive state = empty interval).
     &= [1,\,1]
 \end{align*}
 
-The time-advance interval $[\sigma_L, \sigma_U]$ carries all possible
-inter-departure times admitted by the 90\,\% truncated $\mathrm{Exp}(5)$
-distribution.
+The time-advance interval $(0,+\infty)$ is the exact support of
+$\mathrm{Exp}(\lambda_s)$.  Because the exponential distribution is
+memoryless, the remaining time until the next departure is always
+$(0,+\infty)$ regardless of elapsed time, so $\mathrm{TA}^{\mathrm{LG}}$
+does not depend on $\tilde\sigma$.
 
 \subsubsection*{S-IA: $M/M/1/1$ Server (IA-DEVS)}
 
@@ -152,7 +132,7 @@ State: $\emptyset$ (idle/passive) or $\tilde s \in \mathcal{I}(\mathbb{R}^+_0)$
   \Delta^S_{\mathrm{int}}(\tilde s)
     &= \emptyset \quad\text{(service completes; go idle)} \\
   \Delta^S_{\mathrm{ext}}(\emptyset,\,\tilde e,\,\tilde x)
-    &= [s_L,\,s_U]
+    &= (0,\,+\infty)
        \quad\text{(accept task; start service)} \\
   \Delta^S_{\mathrm{ext}}(\tilde s,\,\tilde e,\,\tilde x)
     &= \max(0,\; \tilde s - \tilde e)
@@ -166,68 +146,53 @@ A \emph{loss event} is observed when $\Delta^S_{\mathrm{ext}}$ is called
 on a non-empty state, indicating that the server was busy at arrival time.
 
 % ─────────────────────────────────────────────────────────────────────────────
-\subsection*{Analytical P$_{\mathrm{loss}}$ Bounds}
+\subsection*{Analytical $P_{\mathrm{loss}}$ Bounds}
 
 The Erlang~B loss probability $P_{\mathrm{loss}}(\rho) = \rho/(1+\rho)$
-is monotone increasing in the traffic intensity $\rho = 1/(\lambda_s \sigma)
-\cdot \mu s = s/\sigma$.
+is monotone increasing in the traffic intensity $\rho = \lambda_s \cdot s$.
 
-Given $\sigma \in [\sigma_L, \sigma_U]$ and $s \in [s_L, s_U]$, the
-traffic intensity satisfies
+With service time $s \in (0,+\infty)$ and fixed arrival rate $\lambda_s > 0$,
+the traffic intensity satisfies $\rho \in (0,+\infty)$.  By monotonicity of
+$P_{\mathrm{loss}}(\rho)$ and taking the closure of the limit values
+$\rho \to 0^+$ and $\rho \to +\infty$:
 \[
-  \rho \;\in\;
-  \Bigl[\underbrace{\tfrac{s_L}{\sigma_U}}_{\rho_{\min}},\;
-        \underbrace{\tfrac{s_U}{\sigma_L}}_{\rho_{\max}}\Bigr].
+  \tilde P_{\mathrm{loss}} \;\in\; [0,\, 1].
 \]
-By monotonicity of $P_{\mathrm{loss}}(\rho)$, the IA-DEVS loss probability
-interval is
-\begin{align}
-  \tilde P_{\mathrm{loss}}
-  &\in
-  \left[
-    \frac{\rho_{\min}}{1+\rho_{\min}},\;
-    \frac{\rho_{\max}}{1+\rho_{\max}}
-  \right].
-  \label{eq:ploss-interval}
-\end{align}
-
-For the 90\,\% quantile bounds in~(\ref{eq:sigma-interval})--(\ref{eq:s-interval}):
-\begin{align*}
-  \rho_{\min} &= s_L/\sigma_U \approx 0.0103/0.5992 \approx 0.01719 \\
-  \rho_{\max} &= s_U/\sigma_L \approx 0.5992/0.0103 \approx 58.17 \\
-  \tilde P_{\mathrm{loss}} &\in [0.017,\; 0.983]
-\end{align*}
 
 The exact STDEVS value from the Erlang~B formula is
 $P_{\mathrm{loss}}^* = \rho^*/(1+\rho^*) = 1/2 = 0.5$
 (since $\rho^* = \lambda_s/\mu = 5/5 = 1$),
-which satisfies $0.017 \leq 0.5 \leq 0.983$ as required. \hfill$\square$
+which satisfies $0 \leq 0.5 \leq 1$ as required. \hfill$\square$
 
 \paragraph{Remark.}
-The width of the IA-DEVS interval is controlled by the tail probability
-$p_L$ used for the quantile truncation.  As $p_L \to 0$ (full support),
-the interval approaches $[0,\,1]$, which is trivially correct but
-uninformative.  As $p_L \to 0.5$ (point interval at the median), the
-IA-DEVS bound collapses to the exact value but the over-approximation
-guarantee is lost.  The choice of $p_L = 0.05$ (90\,\% central region)
-is a practical trade-off.
+The $[0,1]$ bound is trivially correct but uninformative.  A tighter bound
+can be obtained by truncating the exponential support to a quantile interval
+$[q_{p_L},\, q_{1-p_L}]$ for chosen tail probability $p_L$, where
+$q_\alpha(\lambda) = -\tfrac{1}{\lambda}\ln(1-\alpha)$.
+For example, with $p_L = 0.05$ (90\,\% central region) and
+$\lambda_s = \mu = 5$, the bounds
+$[\sigma_L,\sigma_U] = [s_L,s_U] \approx [0.0103,\; 0.5992]\,\text{s}$
+yield $\tilde P_{\mathrm{loss}} \approx [0.017,\; 0.983]$.
+As $p_L \to 0.5$ (point interval at the median), the bound collapses to
+the exact value but the over-approximation guarantee is lost.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection*{Feasibility Note on BFS Simulation}
 
 A full IA-DEVS BFS simulation of the LBM at operational scale
 ($d_r = 10$, $T = 10\,000$\,s, ${\sim}10^5$ events) is not computationally
-feasible: whenever $[\sigma_L, \sigma_U]$ and $[s_L, s_U]$ overlap, each
-arrival creates an ordering branch (``arrival before completion'' vs.\
-``arrival after completion''), leading to exponential branching in the
-number of events.
+feasible: whenever the LG time-advance interval $(0,+\infty)$ and the
+server remaining-service interval overlap, each arrival creates an ordering
+branch (``arrival before completion'' vs.\ ``arrival after completion''),
+leading to exponential branching in the number of events.  With
+$(0,+\infty)$ intervals the two ranges always overlap, so every event
+produces a branch.
 
-The analytical bound in~(\ref{eq:ploss-interval}) is the IA-DEVS result
-without BFS, derived by applying the bounding functions directly to the
-Erlang~B formula.  The C\texttt{++} implementation below verifies this
-bound and demonstrates that the IA-DEVS atomic models are correctly
-specified, including a short 5-event simulation trace that shows the
-interval widening effect.
+The analytical bound above is the IA-DEVS result without BFS, derived by
+applying the bounding functions directly to the Erlang~B formula.  The
+C\texttt{++} implementation below verifies this bound and demonstrates that
+the IA-DEVS atomic models are correctly specified, including a short
+5-event simulation trace that shows the interval widening effect.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection*{5-Event Simulation Trace}
@@ -240,20 +205,24 @@ Initial state: LG-IA elapsed $\tilde\sigma_0 = [0,0]$; S-IA state $= \emptyset$.
 \toprule
 Event & Action & S-IA remaining $\tilde s$ & Loss? \\
 \midrule
-1 & LG fires; S-IA idle $\to$ accept & $[s_L,\,s_U]\approx[0.010,\,0.599]$ & no \\
-2 & LG fires (elapsed $\in[\sigma_L,\sigma_U]$); S-IA state $\gets \max(0,\tilde s - \tilde e)$
-  & $[0,\, 0.589]$ & possible \\
-3 & LG fires; S-IA state $\gets \max(0,\tilde s - \tilde e)$
-  & $[0,\, 0.579]$ & possible \\
-4 & LG fires & $[0,\, 0.569]$ & possible \\
-5 & LG fires & $[0,\, 0.559]$ & possible \\
+1 & LG fires; S-IA idle $\to$ accept & $(0,\,+\infty)$ & no \\
+2 & LG fires (elapsed $\tilde e \in (0,+\infty)$);
+    S-IA: $\max(0,\,\tilde s - \tilde e)$
+  & $[0,\,+\infty)$ & possible \\
+3 & LG fires; S-IA: $\max(0,\,\tilde s - \tilde e)$
+  & $[0,\,+\infty)$ & possible \\
+4 & LG fires & $[0,\,+\infty)$ & possible \\
+5 & LG fires & $[0,\,+\infty)$ & possible \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-After the first acceptance, the remaining service interval steadily widens
-in its lower bound direction (always clamped to 0 because service
-\emph{could} have finished), while the upper bound decreases as elapsed
-time accumulates.  The non-zero upper bound indicates the server
-\emph{could still be busy}, so losses are \emph{possible} but not certain.
-The exact STDEVS simulation determines which branch actually occurs.
+After the first acceptance the remaining service interval is $(0,+\infty)$.
+At event~2, interval subtraction gives
+$(0,+\infty) - (0,+\infty) = (-\infty,+\infty)$; clamping the lower bound
+to~$0$ (closed) yields $[0,+\infty)$.  This state is absorbing: subsequent
+elapsed-time subtractions leave $[0,+\infty)$ unchanged.  The closed
+lower bound $0$ means the server \emph{could} have already finished
+(possible non-loss); the unbounded upper means it could still be running
+(possible loss).  The exact STDEVS simulation determines which branch
+actually occurs.

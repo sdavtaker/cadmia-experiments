@@ -15,6 +15,8 @@
 #include <cmath>
 #include <iomanip>
 #include <iostream>
+#include <limits>
+#include <sstream>
 
 using namespace ckw10_lbm_ia;
 using LG = ia_load_generator;
@@ -28,8 +30,17 @@ static std::string fmt_interval(const I &x) {
         return "empty";
     std::ostringstream os;
     os << std::fixed << std::setprecision(4);
-    os << (x.lower_closed ? "[" : "(") << x.lower << ", " << x.upper
-       << (x.upper_closed ? "]" : ")");
+    const std::string u_str =
+        (x.upper == std::numeric_limits<double>::infinity())
+            ? "+inf"
+            : (std::ostringstream{} << std::fixed << std::setprecision(4) << x.upper, os.str());
+    os.str("");
+    os << (x.lower_closed ? "[" : "(") << x.lower << ", ";
+    if (x.upper == std::numeric_limits<double>::infinity())
+        os << "+inf";
+    else
+        os << x.upper;
+    os << (x.upper_closed ? "]" : ")");
     return os.str();
 }
 
@@ -42,32 +53,27 @@ static double erlang_b(double rho) {
 // ── Main ────────────────────────────────────────────────────────────────────
 
 int main() {
-    // ── 1. Analytical P_loss bounds (spec.tex eq. 3) ─────────────────────────
+    // ── 1. Analytical P_loss bounds (spec.tex) ───────────────────────────────
+    //
+    // With service time s in (0, +inf) and arrival rate lambda_s > 0,
+    // traffic intensity rho = lambda_s * s is in (0, +inf).
+    // P_loss(rho) = rho/(1+rho) maps (0,+inf) onto (0,1); closure of the
+    // limit values gives P_loss in [0, 1].
 
     const double lambda_s = 5.0; // per-server arrival rate: b_f * d_r = 0.5 * 10
     const double mu       = 5.0; // service rate: 1 / s_t = 1 / 0.2
 
-    const double sigma_L = LG::SIGMA_L;
-    const double sigma_U = LG::SIGMA_U;
-    const double s_L     = S::S_L;
-    const double s_U     = S::S_U;
-
-    const double rho_exact = lambda_s / mu; // = 1.0
-    const double rho_min   = s_L / sigma_U; // slowest service, fastest arrival → min ρ
-    const double rho_max   = s_U / sigma_L; // fastest service, slowest arrival → max ρ
-
+    const double rho_exact    = lambda_s / mu; // = 1.0
     const double p_loss_exact = erlang_b(rho_exact);
-    const double p_loss_min   = erlang_b(rho_min);
-    const double p_loss_max   = erlang_b(rho_max);
+    const double p_loss_min   = 0.0; // lim rho->0+  of rho/(1+rho)
+    const double p_loss_max   = 1.0; // lim rho->+inf of rho/(1+rho)
 
     const bool contained = (p_loss_min <= p_loss_exact) && (p_loss_exact <= p_loss_max);
 
     std::cout << "CKW10 LBM IA-DEVS — Analytical P_loss Bounds (TS1, b_f=0.5)\n"
               << "  lambda_s = " << lambda_s << "  mu = " << mu << "\n"
-              << "  90% quantile bounds:\n"
-              << "    sigma in [" << sigma_L << ", " << sigma_U << "] s\n"
-              << "    s_t   in [" << s_L << ", " << s_U << "] s\n"
-              << "  Traffic intensity: rho in [" << rho_min << ", " << rho_max << "]\n"
+              << "  Full exponential support: sigma, s_t in (0, +inf)\n"
+              << "  Traffic intensity: rho in (0, +inf)\n"
               << "  P_loss (IA-DEVS) in [" << p_loss_min << ", " << p_loss_max << "]\n"
               << "  P_loss (Erlang B exact) = " << p_loss_exact << "\n"
               << "  Containment: " << (contained ? "VERIFIED" : "FAILED") << "\n\n";
@@ -89,7 +95,8 @@ int main() {
     I lg_state     = I::closed(0.0, 0.0); // elapsed = 0
     I server_state = I::empty_interval(); // idle
 
-    const I elapsed_interval = I::closed(sigma_L, sigma_U);
+    // Elapsed interval between LG fires: full exponential support (0, +inf)
+    const I elapsed_interval = I::open(0.0, std::numeric_limits<double>::infinity());
     const int n_events       = 5;
 
     for (int k = 1; k <= n_events; ++k) {
