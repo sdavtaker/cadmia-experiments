@@ -1,0 +1,201 @@
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Overview}
+
+This section derives an IA-DEVS formulation of the CKW10 Load Balancer
+Model, starting from the STDEVS specification in Section~\ref{sec:ckw10-lbm}.
+The derivation proceeds in two steps.
+\begin{enumerate}
+  \item \textbf{STDEVS $\to$ UA-DEVS.}
+        Each stochastic transition function $\delta(s,r)$ with $r \sim U(0,1)$
+        is replaced by the set of all values it can produce:
+        $\{\delta(s,r) \mid r \in (0,1)\}$.  This set is an uncertain set
+        in the sense of UA-DEVS~\cite{VDW21}.
+  \item \textbf{UA-DEVS $\to$ IA-DEVS.}
+        Each UA-DEVS uncertain set is enclosed by an interval.
+        The set-to-interval mapping for each LBM component is:
+        \begin{itemize}
+          \item LG and servers: the UA-DEVS set $(0,+\infty)$ is
+            enclosed by the IA-DEVS interval $(0,+\infty)$,
+            the exact support of the exponential distribution.
+          \item WB: the UA-DEVS set $\{1,2\}$ is enclosed by the
+            IA-DEVS interval $[1,2]$.  The enclosure is exact for
+            integer outputs since no integers lie strictly between
+            $1$ and $2$.
+        \end{itemize}
+\end{enumerate}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Step 1: STDEVS to UA-DEVS Translation}
+
+The translation looks only at the \emph{observable outputs and reachable
+states} of each model component, not at the internal random mechanism used
+to select among them.  The specific distribution (exponential, uniform,
+Bernoulli, \ldots) is an implementation detail of the STDEVS model and
+does not appear in the UA-DEVS specification.
+
+\subsubsection*{Load Generator (LG)}
+
+The LG specification says: after each internal transition, the next
+inter-departure time is some positive value.  The set of all reachable
+next states is therefore
+\[
+  S^{LG}_{\text{next}} = (0,\, +\infty) \subset \mathbb{R}^+.
+\]
+The output is deterministic: always $(\mathit{task}_1,\, \texttt{out}_1)$.
+
+\subsubsection*{Weighted Balancer (WB)}
+
+The WB specification says: each arriving task is routed to
+\emph{either} $\texttt{out}_1$ (server~$S1$) or $\texttt{out}_2$
+(server~$S2$) — both are possible outcomes.
+Encoding the output port as an integer
+($\texttt{out}_1 \mapsto 1,\; \texttt{out}_2 \mapsto 2$),
+the UA-DEVS uncertain output is the set $\{1,\, 2\} \subset \mathbb{Z}$.
+The time advance after routing is $+\infty$ (WB becomes passive),
+which is deterministic.
+
+\subsubsection*{Servers S1 and S2}
+
+The server specification says: when the server is \emph{idle} and a
+task arrives, it begins service for some positive duration.  The set
+of all reachable service-time states is
+\[
+  S^{Si}_{\text{next}} = (0,\, +\infty) \subset \mathbb{R}^+.
+\]
+When the server is \emph{busy} and a task arrives, the task is dropped;
+this branch is deterministic and is preserved unchanged in UA-DEVS.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Step 2: UA-DEVS to IA-DEVS Bounding}
+
+\paragraph{WB routing over-approximation.}
+For tractability we decompose the two-server LBM into two independent
+$M/M/1/1$ sub-models, one per server, each with arrival rate
+$\lambda_s = b_f d_r$.  This is exact when $b_f = 0.5$ and $\mu_1 = \mu_2$
+because the routing is symmetric.  In the IA-DEVS formulation, routing
+uncertainty is handled by applying the same interval bounds to both
+sub-models independently.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{IA-DEVS Single-Server Model ($M/M/1/1$)}
+
+We formulate the per-server sub-model as two IA-DEVS atomic components
+connected in series: an \textit{ia\_load\_generator} (LG-IA) and an
+\textit{ia\_mm11\_server} (S-IA).
+
+\subsubsection*{LG-IA: Load Generator (IA-DEVS)}
+
+State $\tilde\sigma \in \mathcal{I}(\mathbb{R}^+_0)$ (elapsed time since
+last departure; passive state = empty interval).
+
+\begin{align*}
+  \mathrm{TA}^{\mathrm{LG}}(\tilde\sigma)
+    &= (0,\,+\infty) \\
+  \Delta^{\mathrm{LG}}_{\mathrm{int}}(\tilde\sigma)
+    &= [0,\,0] \\
+  \Delta^{\mathrm{LG}}_{\mathrm{ext}}(\tilde\sigma,\,\tilde e,\,\tilde x)
+    &= \tilde\sigma + \tilde e
+       \quad\text{(accumulate elapsed; no meaningful input)} \\
+  \Lambda^{\mathrm{LG}}(\tilde\sigma)
+    &= [\mathtt{arrived},\,\mathtt{arrived}]
+\end{align*}
+
+The time-advance interval $(0,+\infty)$ is the exact support of
+$\mathrm{Exp}(\lambda_s)$.  Because the exponential distribution is
+memoryless, the remaining time until the next departure is always
+$(0,+\infty)$ regardless of elapsed time, so $\mathrm{TA}^{\mathrm{LG}}$
+does not depend on $\tilde\sigma$.
+
+\subsubsection*{S-IA: $M/M/1/1$ Server (IA-DEVS)}
+
+State: $\emptyset$ (idle/passive) or $\tilde s \in \mathcal{I}(\mathbb{R}^+_0)$
+(remaining service time when busy).
+
+\begin{align*}
+  \mathrm{TA}^S(\emptyset)
+    &= \emptyset \quad\text{(passive)} \\
+  \mathrm{TA}^S(\tilde s)
+    &= \tilde s \\
+  \Delta^S_{\mathrm{int}}(\tilde s)
+    &= \emptyset \quad\text{(service completes; go idle)} \\
+  \Delta^S_{\mathrm{ext}}(\emptyset,\,\tilde e,\,\tilde x)
+    &= (0,\,+\infty)
+       \quad\text{(accept task; start service)} \\
+  \Delta^S_{\mathrm{ext}}(\tilde s,\,\tilde e,\,\tilde x)
+    &= \max(0,\; \tilde s - \tilde e)
+       \quad\text{(drop task; update remaining time)} \\
+  \Lambda^S(\tilde s)
+    &= [\mathtt{task\_completed},\,\mathtt{task\_completed}]
+\end{align*}
+
+A \emph{loss event} is observed when $\Delta^S_{\mathrm{ext}}$ is called
+on a non-empty state, indicating that the server was busy at arrival time.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Analytical $P_{\mathrm{loss}}$ Bounds}
+
+The Erlang~B loss probability $P_{\mathrm{loss}}(\rho) = \rho/(1+\rho)$
+is monotone increasing in the traffic intensity $\rho = \lambda_s \cdot s$.
+
+With service time $s \in (0,+\infty)$ and fixed arrival rate $\lambda_s > 0$,
+the traffic intensity satisfies $\rho \in (0,+\infty)$.  By monotonicity of
+$P_{\mathrm{loss}}(\rho)$ and taking the closure of the limit values
+$\rho \to 0^+$ and $\rho \to +\infty$:
+\[
+  \tilde P_{\mathrm{loss}} \;\in\; [0,\, 1].
+\]
+
+The exact STDEVS value from the Erlang~B formula is
+$P_{\mathrm{loss}}^* = \rho^*/(1+\rho^*) = 1/2 = 0.5$
+(since $\rho^* = \lambda_s/\mu = 5/5 = 1$),
+which satisfies $0 \leq 0.5 \leq 1$ as required. \hfill$\square$
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{BFS Simulation Complexity}
+
+A full IA-DEVS BFS simulation of the LBM at operational scale
+($d_r = 10$, $T = 10\,000$\,s, ${\sim}10^5$ events) requires exponential
+resources: whenever the LG time-advance interval $(0,+\infty)$ and the
+server remaining-service interval overlap, each arrival creates an ordering
+branch (``arrival before completion'' vs.\ ``arrival after completion'').
+With $(0,+\infty)$ intervals the two ranges always overlap, so every event
+produces a branch, giving $2^{{\sim}10^5}$ trajectories at operational scale.
+
+The analytical bound above is the IA-DEVS result without BFS, derived by
+applying the bounding functions directly to the Erlang~B formula.  The
+C\texttt{++} implementation below verifies this bound and demonstrates that
+the IA-DEVS atomic models are correctly specified, including a short
+5-event simulation trace that shows the interval widening effect.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{5-Event Simulation Trace}
+
+Initial state: LG-IA elapsed $\tilde\sigma_0 = [0,0]$; S-IA state $= \emptyset$.
+
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}clll@{}}
+\toprule
+Event & Action & S-IA remaining $\tilde s$ & Loss? \\
+\midrule
+1 & LG fires; S-IA idle $\to$ accept & $(0,\,+\infty)$ & no \\
+2 & LG fires (elapsed $\tilde e \in (0,+\infty)$);
+    S-IA: $\max(0,\,\tilde s - \tilde e)$
+  & $[0,\,+\infty)$ & possible \\
+3 & LG fires; S-IA: $\max(0,\,\tilde s - \tilde e)$
+  & $[0,\,+\infty)$ & possible \\
+4 & LG fires & $[0,\,+\infty)$ & possible \\
+5 & LG fires & $[0,\,+\infty)$ & possible \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+After the first acceptance the remaining service interval is $(0,+\infty)$.
+At event~2, interval subtraction gives
+$(0,+\infty) - (0,+\infty) = (-\infty,+\infty)$; clamping the lower bound
+to~$0$ (closed) yields $[0,+\infty)$.  This state is absorbing: subsequent
+elapsed-time subtractions leave $[0,+\infty)$ unchanged.  The closed
+lower bound $0$ means the server \emph{could} have already finished
+(possible non-loss); the unbounded upper means it could still be running
+(possible loss).  The exact STDEVS simulation determines which branch
+actually occurs.

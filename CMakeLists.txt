@@ -47,6 +47,7 @@ endfunction()
 
 add_subdirectory(vdw14)
 add_subdirectory(vdw21)
+add_subdirectory(ckw10-lbm-ia)
 
 # Code Formatting
 find_program(CLANG_FORMAT
@@ -61,6 +62,8 @@ if(CLANG_FORMAT)
         "${CMAKE_CURRENT_SOURCE_DIR}/vdw14/*.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/vdw21/*.hpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/vdw21/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ckw10-lbm-ia/*.hpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/ckw10-lbm-ia/*.cpp"
     )
 
     add_custom_target(experiments-format
