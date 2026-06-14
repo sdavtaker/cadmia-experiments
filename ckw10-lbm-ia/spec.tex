@@ -151,16 +151,15 @@ $P_{\mathrm{loss}}^* = \rho^*/(1+\rho^*) = 1/2 = 0.5$
 which satisfies $0 \leq 0.5 \leq 1$ as required. \hfill$\square$
 
 % ─────────────────────────────────────────────────────────────────────────────
-\subsection*{Feasibility Note on BFS Simulation}
+\subsection*{BFS Simulation Complexity}
 
 A full IA-DEVS BFS simulation of the LBM at operational scale
-($d_r = 10$, $T = 10\,000$\,s, ${\sim}10^5$ events) is not computationally
-feasible: whenever the LG time-advance interval $(0,+\infty)$ and the
+($d_r = 10$, $T = 10\,000$\,s, ${\sim}10^5$ events) requires exponential
+resources: whenever the LG time-advance interval $(0,+\infty)$ and the
 server remaining-service interval overlap, each arrival creates an ordering
-branch (``arrival before completion'' vs.\ ``arrival after completion''),
-leading to exponential branching in the number of events.  With
-$(0,+\infty)$ intervals the two ranges always overlap, so every event
-produces a branch.
+branch (``arrival before completion'' vs.\ ``arrival after completion'').
+With $(0,+\infty)$ intervals the two ranges always overlap, so every event
+produces a branch, giving $2^{{\sim}10^5}$ trajectories at operational scale.
 
 The analytical bound above is the IA-DEVS result without BFS, derived by
 applying the bounding functions directly to the Erlang~B formula.  The
