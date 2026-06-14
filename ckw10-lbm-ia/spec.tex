@@ -97,7 +97,7 @@ last departure; passive state = empty interval).
     &= \tilde\sigma + \tilde e
        \quad\text{(accumulate elapsed; no meaningful input)} \\
   \Lambda^{\mathrm{LG}}(\tilde\sigma)
-    &= [1,\,1]
+    &= [\mathtt{arrived},\,\mathtt{arrived}]
 \end{align*}
 
 The time-advance interval $(0,+\infty)$ is the exact support of
@@ -125,8 +125,7 @@ State: $\emptyset$ (idle/passive) or $\tilde s \in \mathcal{I}(\mathbb{R}^+_0)$
     &= \max(0,\; \tilde s - \tilde e)
        \quad\text{(drop task; update remaining time)} \\
   \Lambda^S(\tilde s)
-    &= [1,\,1]
-       \quad\text{(completed task signal)}
+    &= [\mathtt{task\_completed},\,\mathtt{task\_completed}]
 \end{align*}
 
 A \emph{loss event} is observed when $\Delta^S_{\mathrm{ext}}$ is called
@@ -150,18 +149,6 @@ The exact STDEVS value from the Erlang~B formula is
 $P_{\mathrm{loss}}^* = \rho^*/(1+\rho^*) = 1/2 = 0.5$
 (since $\rho^* = \lambda_s/\mu = 5/5 = 1$),
 which satisfies $0 \leq 0.5 \leq 1$ as required. \hfill$\square$
-
-\paragraph{Remark.}
-The $[0,1]$ bound is trivially correct but uninformative.  A tighter bound
-can be obtained by truncating the exponential support to a quantile interval
-$[q_{p_L},\, q_{1-p_L}]$ for chosen tail probability $p_L$, where
-$q_\alpha(\lambda) = -\tfrac{1}{\lambda}\ln(1-\alpha)$.
-For example, with $p_L = 0.05$ (90\,\% central region) and
-$\lambda_s = \mu = 5$, the bounds
-$[\sigma_L,\sigma_U] = [s_L,s_U] \approx [0.0103,\; 0.5992]\,\text{s}$
-yield $\tilde P_{\mathrm{loss}} \approx [0.017,\; 0.983]$.
-As $p_L \to 0.5$ (point interval at the median), the bound collapses to
-the exact value but the over-approximation guarantee is lost.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \subsection*{Feasibility Note on BFS Simulation}
